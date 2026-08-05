@@ -4,6 +4,139 @@ All notable changes to SmartCC are documented here, organized by sprint per `Pha
 
 ---
 
+## [Sprint 9] — Backend Scaffold (v2 begins)
+
+**Date:** 2026-08-02
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 10
+
+### Added
+- **Repo restructured into a monorepo**: existing frontend content moved into `frontend/`, new `backend/` added, docs stay at the repo root -- matching the `frontend/ backend/` structure from Architecture.md's original folder-structure diagram
+- **FastAPI backend scaffold** (`backend/app/`): `main.py` (CORS + router registration), `config.py` (env-based, Security.md §2 compliant -- no hardcoded secrets)
+- **Pydantic models** (`app/models/compiler.py`) mirroring `frontend/src/types/compiler.ts` field-for-field -- the same single-source-of-truth discipline as the frontend, just on the Python side
+- **Three real endpoints** matching API-spec.md exactly: `POST /api/v1/compile`, `GET /api/v1/grammar/:id`, `GET /api/v1/history/:projectId`, plus a `GET /health` check
+- **Pipeline stub** (`app/compiler/pipeline.py`) -- returns the same two fixtures as the frontend's mock adapter (success + semantic-failure), so both sides demo identically during the transition. Explicitly documented as a stub: no real lexer/parser logic yet, by design (Rules.md's sprint-by-sprint gate)
+- Empty `lexer/`, `parser/`, `semantic/`, `optimizer/`, `codegen/` packages under `app/compiler/`, each with a docstring naming the sprint that fills it in (10-14) -- so they read as "scheduled," not "abandoned"
+- 8 integration tests (`tests/test_endpoints.py`) covering the endpoint contract: success/failure compile fixtures, empty-source 400, grammar 404, history filtering by project
+- `requirements.txt` / `requirements-dev.txt`, `.env.example`, backend `.gitignore`, backend `README.md` with curl-based manual testing instructions
+
+### Notes
+- **Verified with a real running server, not just `TestClient`**: started `uvicorn` and hit every endpoint with `curl` to confirm actual HTTP behavior, not just in-process test-client behavior.
+- `ruff check .` -- 0 errors (started at 15, all auto-fixable style/import-order issues, fixed via `ruff check --fix`).
+- `pytest` -- 8/8 passing.
+- **The frontend does not talk to this backend yet.** `compilerService` still always uses `mockAdapter` (Architecture.md §4.2) -- building `httpAdapter` and wiring the swap is Sprint 15's job, once all five real compiler phases exist behind these endpoints. Sprint 9's value is proving the contract shape end-to-end before any real compiler logic is written on top of it.
+
+### Sprint 9 Definition of Done — Checklist
+- [x] Server starts and responds to real HTTP requests (verified via `curl`, not just `TestClient`)
+- [x] Every route matches `API-spec.md`'s documented shape exactly
+- [x] `pytest` passes (8/8)
+- [x] `ruff check .` clean
+- [x] No secrets hardcoded; `.env.example` provided, `.env` git-ignored
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 10 (real Lexer) starts
+
+---
+
+## [Polish Pass 1] — v1 Audit & Bug Fixes
+
+**Date:** 2026-07-30
+**Status:** ✅ Complete
+
+Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's re-baseline checkpoint). Ran `tsc -b`, `oxlint`, and a manual review of every store/hook for stale-state and edge-case bugs.
+
+### Fixed
+- **Pipeline stepper never showed a failed phase (real bug, present since Sprint 3).** `workspaceStore`'s `status` field conflated two different things under the value `'success'`: "the service call returned a result" and "the compilation itself succeeded." When a compilation *failed* at some phase (e.g. semantic), `status` was set to `'error'` instead -- but `PipelineStepper` and `ConsolePanel` both checked `status === 'success'` to decide whether to render failure-phase details, so that branch was silently unreachable. The stepper fell through to "all pending" (no colors at all) instead of showing green-through-failed-phase-then-red. Fixed by renaming the status value to `'done'` (meaning "got a result back, check `result.status` for the actual outcome") and separating it cleanly from `'error'` (meaning "the adapter call itself threw"). Verified against both fixtures: the stepper now correctly shows lexical/syntax as done and semantic as failed (red) for the semantic-failure fixture.
+- **Resizable panel drag could get permanently "stuck."** `useResizableWidth` attached `mousemove`/`mouseup` handlers to the container element. A fast drag that releases the mouse outside the container's bounds never fires that element's `mouseup`, leaving `cursor: col-resize` and `user-select: none` applied to the whole page until an unrelated click happened to reset it. Fixed by moving both listeners to `window`.
+- **Collapsed sidebar was inaccessible to screen readers.** When the sidebar collapses to icon-only, the nav `<NavLink>`s had no text content and no `aria-label`, so a screen reader announced nothing meaningful for any nav item. Added conditional `aria-label` matching Design.md §8's accessibility requirement.
+- **Removed a dead duplicate file**, `SemanticReportPanel.tsx` -- an unused, never-imported earlier version of `SemanticReportView.tsx` left over from initial Sprint 2 scaffolding. Violated PRD.md §13's "no duplicate code" success criterion.
+- **Quieted all 9 `oxlint` warnings** (`react-refresh/only-export-components`) by moving the lazy route definitions out of `router.tsx` into a dedicated `lazyRoutes.tsx`, so `router.tsx` exports only the router object and Fast Refresh works cleanly on both files.
+
+### Notes
+- `npx oxlint` now reports 0 warnings, 0 errors (was 9 warnings). `tsc -b` and `npm run build` remain clean.
+- This pass was prompted by Karan asking for v1 polish before starting v2 backend work -- a good reminder that "builds cleanly" and "behaves correctly" are different bars, and the Pipeline stepper bug specifically slipped through because earlier sprint verification checked that mock fixtures loaded correctly, not that every UI branch reachable from them actually rendered.
+
+---
+
+## [Sprint 8] — Grammar Library, History, Reports, Settings, Help, Projects
+
+**Date:** 2026-07-30
+**Status:** ✅ Complete — this closes out v1 entirely, pending Karan's final review
+
+### Added
+- **Projects** — `useProjectsStore` (Zustand, in-memory CRUD), full `ProjectsPage` (create/rename/delete, "Open in Workspace" links). Real Project CRUD against a backend is v3 scope (API-spec.md §6); this is an honest v1 in-memory implementation, not a stub
+- **Grammar Library** — `GrammarLibraryPage` fetches through `compilerService.getGrammar()` (not the fixture directly), displays productions and a copyable sample program
+- **History** — dedicated `historyService` + 10-record fixture (`features/history/`), `HistoryPage` with All/Success/Failed filtering via the shared `DataTable`
+- **Reports** — `deriveReportStats()` (pure function, unit-testable per Testing.md §2.1) computes stats client-side from history records, no separate reports fixture needed (SystemDesign.md §4.5). `PhaseFailureChart` (Recharts) shows failure distribution by phase
+- **Settings** — `useSettingsStore`, with controls that are **functionally wired, not cosmetic**: Editor Font Size actually resizes the Monaco editor in the Workspace; Simulated Compile Delay actually changes how long `mockAdapter.compile()` takes (via `services/mockConfig.ts`, keeping the one-way `features → services` dependency direction from Architecture.md §3 intact — Settings writes to a plain config object rather than services importing from features)
+- **Help** — `Accordion` UI primitive + FAQ content covering the mock-data nature of v1, the simulated compile delay, and how to read the Pipeline stepper
+
+### Notes
+- **This completes v1 entirely.** Every page in PRD.md §7 is now real (no `ComingSoon` placeholders remain anywhere in the app).
+- Known v1 inconsistency, intentionally not fixed now: the Dashboard's "Recent Projects" card (Sprint 2) and the new Projects page each have their own independent mock dataset — they aren't the same underlying store. Unifying them properly needs a real backend as the single source of truth (v2+); wiring the Dashboard to `useProjectsStore` now would be a partial, throwaway fix.
+- `npm run build` passes with zero TypeScript errors and no bundle-size warnings; the shared Recharts `BarChart` chunk is now reused by both Dashboard and Reports.
+
+### Sprint 8 Definition of Done — Checklist
+- [x] Code builds with zero TypeScript errors
+- [x] No console errors/warnings in dev mode
+- [x] Every PRD.md §7 page is a real, functioning page (no remaining placeholders)
+- [x] Settings controls verified to actually affect behavior (font size, compile delay)
+- [x] Mock data wired through service layers where a future backend contract exists (grammar, history); local Zustand stores used where v1 scope is genuinely local-only (projects, settings)
+- [x] `CHANGELOG.md` updated
+- [ ] Final review from Karan — **v1 complete pending this approval**
+
+---
+
+## [Sprint 7] — Assembly Viewer + Console/Error Panel Completion
+
+**Date:** 2026-07-30
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 8
+
+### Added
+- `AssemblyViewer` — target assembly output table (instruction/operands/comment) via the shared `DataTable` primitive, codegen-phase colored
+- Final Workspace tab: Assembly — bringing the tab bar to 10 tabs, matching every item in PRD.md §8's Compiler Workspace requirement list
+- `ConsolePanel` success summary now also reports assembly line count alongside tokens/symbols/TAC counts
+
+### Notes
+- Console and Error Panel themselves were already built in Sprint 3; this sprint's console/error-panel-related work was the summary-line update above -- no separate rebuild was needed since both already met their requirements.
+- **This completes every Compiler Workspace visualization panel in PRD.md §8.** Only Sprint 8 remains for v1: Project management, Grammar Library, History, Reports, Settings, and Help.
+- No new dependencies this sprint.
+- `npm run build` passes with zero TypeScript errors and no bundle-size warnings.
+
+### Sprint 7 Definition of Done — Checklist
+- [x] Code builds with zero TypeScript errors
+- [x] No console errors/warnings in dev mode
+- [x] Verified against both mock fixtures (success shows 4 assembly lines including the folded-constant comment; semantic failure correctly shows the "didn't reach code generation" empty state)
+- [x] Mock data wired through the existing service layer, not hardcoded in components
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 8 starts
+
+---
+
+## [Sprint 6] — Semantic Report + TAC + Optimization Comparison
+
+**Date:** 2026-07-25
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 7
+
+### Added
+- `SemanticReportView` — scoped strictly to semantic-phase diagnostics (distinct from the general Diagnostics tab, which shows all phases), plus a scope-by-scope symbol summary grouped from the symbol table; clearly distinguishes "semantic analysis passed," "semantic analysis found issues," and "semantic analysis never ran because an earlier phase failed"
+- `TACViewer` — Three Address Code table (op/arg1/arg2/result) via the shared `DataTable` primitive
+- `OptimizationComparisonView` — before/after instruction lists (stacked, since the output panel is narrow), passes-applied badges, and an instruction-count reduction summary
+- Three new Workspace tabs: Semantic Report, TAC, Optimization — bringing the tab bar to 9 tabs total
+- Tab bar changed from equal-width (`flex-1`) to horizontally scrollable, auto-width tabs — 9 tab labels (including "Semantic Report") no longer fit an equal-width layout in the ~380–560px output panel
+
+### Notes
+- No new dependencies this sprint — all three new views reuse existing primitives (`DataTable`, `Card`, `Badge`).
+- `npm run build` passes with zero TypeScript errors and no bundle-size warnings.
+
+### Sprint 6 Definition of Done — Checklist
+- [x] Code builds with zero TypeScript errors
+- [x] No console errors/warnings in dev mode
+- [x] Verified against both mock fixtures (success shows the constant-folding pass and a 3→2 instruction reduction; semantic failure correctly shows "semantic analysis found issues" with the undeclared-variable diagnostic)
+- [x] Mock data wired through the existing service layer, not hardcoded in components
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 7 starts
+
+---
+
 ## [Sprint 5] — Parse Tree Visualization
 
 **Date:** 2026-07-25

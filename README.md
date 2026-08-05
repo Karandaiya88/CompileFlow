@@ -2,7 +2,9 @@
 
 A web-based educational compiler that visualizes every phase of compiler design -- lexical analysis through target code generation -- in one interactive pipeline.
 
-> **Current phase: v1 -- Frontend only, mock-data driven.** See `Phases.md` for the full roadmap and `Architecture.md`/`SystemDesign.md` for how the mock layer is designed to swap cleanly for a real FastAPI backend later.
+> **Current phase: v2 Sprint 9 -- backend scaffold.** The frontend (v1) is feature-complete on mock data. The backend now exists as a real FastAPI server with routes matching `API-spec.md` exactly, but the compiler pipeline itself is still a stub -- real phases (Lexer, Parser, Semantic Analyzer, Optimizer, Codegen) arrive incrementally across Sprints 10-14. See `Phases.md` for the full roadmap.
+
+This is a **monorepo**: `frontend/` and `backend/` are independent, separately-run projects sharing the docs at this root.
 
 ---
 
@@ -18,72 +20,79 @@ All product/engineering docs live at the repo root:
 | `Design.md` | Color/type/spacing/motion design tokens |
 | `Rules.md` | Coding standards, AI-assisted dev boundaries, error handling |
 | `Phases.md` | v1->v4 roadmap and sprint sequencing |
-| `API-spec.md` | Forward-looking backend contract (v2+) |
+| `API-spec.md` | Backend API contract -- now implemented by `backend/`, see Sprint 9 |
 | `Security.md` | Security posture, secrets management, threat model |
 | `Testing.md` | Test pyramid, per-algorithm correctness testing, CI |
 | `Memory.md` | Forward-looking AI Engine memory architecture (v4) |
 
 ---
 
-## Tech Stack (v1)
-
-React 19 - TypeScript (strict) - Vite - Tailwind CSS v4 - Framer Motion - React Router - lucide-react
-
----
-
 ## Getting Started
 
+### Frontend
+
 ```bash
+cd frontend
 npm install
 cp .env.example .env
 npm run dev
 ```
 
-Open the printed local URL. The app runs entirely on mock JSON fixtures (`src/features/*/mocks/`) -- no backend required.
+Runs entirely on mock JSON fixtures -- no backend required yet (the mock-to-real swap is Sprint 15).
 
-### Available Scripts
+### Backend
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Start the Vite dev server |
-| `npm run build` | Type-check (`tsc -b`) and produce a production build |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run oxlint |
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements-dev.txt
+cp .env.example .env
+uvicorn app.main:app --reload --port 8000
+```
+
+API docs: http://localhost:8000/docs. See `backend/README.md` for details.
+
+---
+
+## Tech Stack
+
+**Frontend (v1, complete):** React 19 · TypeScript (strict) · Vite · Tailwind CSS v4 · Framer Motion · React Router · Zustand · TanStack Table · React Flow · Recharts
+
+**Backend (v2, in progress):** FastAPI · Python · Pydantic · (PLY arrives with the real lexer, Sprint 10)
 
 ---
 
 ## Project Structure
 
-Feature-based architecture -- see `Architecture.md` Section 3 for the authoritative layout. Summary:
-
 ```
-src/
-├── app/           # Router, providers, app bootstrap
-├── layouts/       # AppShell, Sidebar, Topbar
-├── pages/         # Thin route-level containers
-├── features/      # compiler-workspace, dashboard, grammar-library, history, reports
-├── components/    # Cross-feature reusable UI (ui/, charts/, data-table/, feedback/)
-├── services/      # compilerService (backend-ready contract) + mockAdapter
-├── types/         # Shared TypeScript models (compiler.ts -- single source of truth)
-├── hooks/, lib/, styles/
+smartcc/
+├── frontend/          # React app -- see Architecture.md for the authoritative layout
+│   └── src/
+│       ├── app/ layouts/ pages/ features/ components/ services/ types/
+├── backend/            # FastAPI app -- see backend/README.md
+│   └── app/
+│       ├── main.py models/ routers/ compiler/
+├── PRD.md, Architecture.md, SystemDesign.md, ...   # docs (this level)
 ```
 
 ---
 
-## Sprint Status
+## Roadmap Status
 
-Tracking per `Phases.md` Section 2 (v1):
+**v1 (Frontend) -- ✅ Complete.** All 8 sprints done, every page functional on mock data. See `CHANGELOG.md`.
 
-- [x] Sprint 1 -- App shell, routing, layout, design system foundation
-- [x] Sprint 2 -- Dashboard
-- [x] Sprint 3 -- Compiler Workspace shell (editor + pipeline stepper)
-- [x] Sprint 4 -- Token Viewer + Symbol Table
-- [x] Sprint 5 -- Parse Tree visualization
-- [ ] Sprint 6 -- Semantic Report + TAC + Optimization Comparison
-- [ ] Sprint 7 -- Assembly Viewer + Console + Error Panel
-- [ ] Sprint 8 -- Grammar Library, History, Reports, Settings, Help
+**v2 (Real Backend) -- 🚧 In progress:**
 
-See `CHANGELOG.md` for detailed per-sprint entries.
+- [x] Sprint 9 -- FastAPI scaffold + `/compile`, `/grammar`, `/history` endpoint skeletons (stub pipeline, real HTTP contract)
+- [ ] Sprint 10 -- Real Lexer (PLY)
+- [ ] Sprint 11 -- Real Parser → AST
+- [ ] Sprint 12 -- Real Semantic Analyzer
+- [ ] Sprint 13 -- Real TAC generation + Optimizer
+- [ ] Sprint 14 -- Real target code generation
+- [ ] Sprint 15 -- Frontend `mockAdapter` → `httpAdapter` swap, end-to-end integration
+
+See `CHANGELOG.md` for detailed per-sprint entries and `Phases.md` for the full v1-v4 roadmap.
 
 ---
 
