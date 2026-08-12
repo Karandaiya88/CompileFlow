@@ -1,24 +1,22 @@
 """
-Pipeline orchestrator -- Sprint 9 scaffold only.
+Pipeline orchestrator.
 
-None of the real compiler phases exist yet. This returns a fixed stub
-result so the /compile endpoint's request/response shape can be built,
-tested, and pointed at by the frontend's httpAdapter (Architecture.md
-Section 8) before any real compiler logic exists.
+Sprint 10 update: tokenization is now real (app/compiler/lexer), so
+lexical errors on arbitrary input are genuinely detected -- not just the
+two canned demo fixtures below. Everything downstream of tokens (AST,
+symbol table, diagnostics beyond lexical ones, TAC, optimization,
+assembly) is still a fixed stub, since the parser doesn't exist until
+Sprint 11.
 
-Real phases replace this stub incrementally, per Phases.md v2 roadmap:
-  Sprint 10 -- real Lexer (PLY) replaces the stub token list
+Real phases replace the remaining stub incrementally, per Phases.md v2
+roadmap:
   Sprint 11 -- real Parser replaces the stub AST
   Sprint 12 -- real Semantic Analyzer replaces the stub symbol table/diagnostics
   Sprint 13 -- real TAC generation + Optimizer replace the stub tac/optimization
   Sprint 14 -- real target codegen replaces the stub assembly
-
-Do not add real lexer/parser logic here yet -- this file's only job right
-now is to prove the endpoint contract end-to-end. Jumping ahead to real
-logic before Sprint 10 would violate the sprint-by-sprint approval gate
-in Rules.md.
 """
 
+from app.compiler.lexer.lexer import tokenize
 from app.models.compiler import (
     AssemblyLine,
     ASTNode,
@@ -176,11 +174,48 @@ _STUB_SEMANTIC_FAILURE = CompilationResult(
 
 
 def compile_source(source: str) -> CompilationResult:
-    """Stub pipeline entry point. Deterministic routing mirrors the
-    frontend's mockAdapter.ts so both sides demo identically during the
-    transition period (Sprint 9-14)."""
+    """Pipeline entry point.
+
+    Real: tokenization, and lexical-error detection on genuinely
+    arbitrary input.
+    Still stub: everything from parsing onward -- routes to one of two
+    canned downstream fixtures based on whether an `undeclared_demo`
+    identifier token appears, same demo convention as the frontend's
+    mockAdapter.ts, so both sides demo identically during the transition
+    period (Sprint 10-14).
+    """
     if not source.strip():
         raise ValueError("Source code is empty -- nothing to compile.")
-    if "undeclared_demo" in source:
-        return _STUB_SEMANTIC_FAILURE
-    return _STUB_SUCCESS
+
+    lex_result = tokenize(source)
+
+    if lex_result.errors:
+        first_error = lex_result.errors[0]
+        return CompilationResult(
+            status=CompileStatus.FAILED,
+            failedAtPhase=CompilerPhase.LEXICAL,
+            tokens=lex_result.tokens,
+            ast=None,
+            symbolTable=[],
+            diagnostics=[
+                SemanticDiagnostic(
+                    severity=Severity.ERROR,
+                    message=first_error.message,
+                    line=first_error.line,
+                    phase=CompilerPhase.LEXICAL,
+                )
+            ],
+            tac=[],
+            optimization=None,
+            assembly=[],
+        )
+
+    has_undeclared_demo = any(
+        t.type == TokenType.IDENTIFIER and t.value == "undeclared_demo" for t in lex_result.tokens
+    )
+    stub = _STUB_SEMANTIC_FAILURE if has_undeclared_demo else _STUB_SUCCESS
+
+    # Real tokens override the stub's canned token list; everything else
+    # in the stub (ast, symbolTable, tac, ...) is still simulated until
+    # Sprint 11+.
+    return stub.model_copy(update={"tokens": lex_result.tokens})

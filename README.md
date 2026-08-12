@@ -85,7 +85,7 @@ smartcc/
 **v2 (Real Backend) -- 🚧 In progress:**
 
 - [x] Sprint 9 -- FastAPI scaffold + `/compile`, `/grammar`, `/history` endpoint skeletons (stub pipeline, real HTTP contract)
-- [ ] Sprint 10 -- Real Lexer (PLY)
+- [x] Sprint 10 -- Real Lexer (PLY) -- genuine tokenization + lexical-error detection on arbitrary input
 - [ ] Sprint 11 -- Real Parser → AST
 - [ ] Sprint 12 -- Real Semantic Analyzer
 - [ ] Sprint 13 -- Real TAC generation + Optimizer

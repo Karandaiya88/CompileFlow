@@ -4,6 +4,35 @@ All notable changes to SmartCC are documented here, organized by sprint per `Pha
 
 ---
 
+## [Sprint 10] — Real Lexer (PLY)
+
+**Date:** 2026-08-04
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 11
+
+### Added
+- **Real PLY-based lexer** (`backend/app/compiler/lexer/lexer.py`): keywords (`int`, `float`, `char`, `void`, `return`, `if`, `else`, `while`, `for`), identifiers, integer literals, arithmetic/comparison operators (`= + - * / == != < > <= >=`), punctuation (`( ) { } ;`), and both comment styles (`//` line, `/* */` block, correctly advancing line count across multi-line blocks)
+- `tokenize(source) -> LexResult` public API: real token list + genuine lexical-error detection (illegal characters), with accurate line/column tracking computed from lexer position
+- **11 table-driven unit tests** (`tests/test_lexer.py`), each with a manually-verified expected token sequence per Testing.md §2.2 -- covering keyword/identifier disambiguation, multi-char operator precedence (`==` vs `=`, `<=` vs `<`), multi-line line/column tracking, comment tokenization, illegal-character recovery (lexing continues past a bad character rather than aborting), and empty input
+- `pipeline.py` now calls the real lexer: **lexical errors on genuinely arbitrary input are now real**, not limited to the two canned demo programs. A program with an illegal character now correctly returns `status: "failed"`, `failedAtPhase: "lexical"`, with the actual error message and line number
+- For lexically-valid input, real tokens now replace the stub's canned token list (via `result.model_copy(update=...)`), while AST/symbol-table/TAC/optimization/assembly remain the Sprint 9 stub until their respective sprints
+
+### Notes
+- **Scope note documented in the lexer's own docstring**: it recognizes a broader keyword/operator set than the grammar currently parses (GrammarLibrary's `cLikeGrammar` only covers `int`/`return`/`+` so far) -- intentional, since lexers are commonly built ahead of the parser that consumes their output. The parser (Sprint 11) grows into this token set incrementally.
+- **Known limitation, documented in code, not hidden**: the lexer uses a single module-level PLY lexer instance (reset per call) rather than a fresh instance per request, for practical reasons -- PLY's dynamic-module pattern for per-instance lexers breaks its function-signature introspection when functions become bound methods. Not safe for true request concurrency at this stage; acceptable for the project's current scale, flagged here rather than left as a silent gap.
+- Verified against a real running server via `curl`, not just `TestClient`: submitted a program with an illegal `@` character and confirmed the full failure response shape, and a program with a `//` comment to confirm arbitrary (non-fixture) programs now tokenize correctly end-to-end.
+- `pytest` -- 19/19 passing (8 endpoint + 11 lexer). `ruff check .` clean.
+
+### Sprint 10 Definition of Done — Checklist
+- [x] Real lexer implemented (PLY), not a stub
+- [x] Table-driven unit tests with manually-verified expected output (Testing.md §2.2)
+- [x] Verified against a real running server, not just in-process tests
+- [x] Known limitations documented in code comments, not silently left as gaps
+- [x] `pytest` passes (19/19), `ruff check .` clean
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 11 (real Parser) starts
+
+---
+
 ## [Sprint 9] — Backend Scaffold (v2 begins)
 
 **Date:** 2026-08-02

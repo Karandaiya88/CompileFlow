@@ -2,7 +2,7 @@
 
 FastAPI backend for the SmartCC compiler visualizer.
 
-> **Current phase: v2 Sprint 9 -- scaffold only.** Every route matches `API-spec.md` exactly and returns real HTTP responses, but the compiler pipeline itself (`app/compiler/pipeline.py`) is still a fixed stub. Real phases replace the stub incrementally across Sprints 10-14 -- see `Phases.md` at the repo root.
+> **Current phase: v2 Sprint 10 -- real Lexer.** Tokenization and lexical-error detection are now real (PLY-based, `app/compiler/lexer/`), verified against arbitrary input. The rest of the pipeline (parsing, semantic analysis, TAC/optimization, codegen) is still a stub -- see `Phases.md` for the Sprint 11-14 roadmap.
 
 ---
 
@@ -81,6 +81,14 @@ curl -X POST http://localhost:8000/api/v1/compile \
 curl -X POST http://localhost:8000/api/v1/compile \
   -H "Content-Type: application/json" \
   -d '{"source": "int main() { return undeclared_demo + 1; }"}'
+
+# Real lexical error (Sprint 10) -- try a genuinely invalid program:
+curl -X POST http://localhost:8000/api/v1/compile \
+  -H "Content-Type: application/json" \
+  -d '{"source": "int x = 5 @ 3;"}'
+
+# Or run the lexer's own unit tests directly:
+python -m pytest tests/test_lexer.py -v
 
 # Or just run the automated suite:
 python -m pytest tests/ -v
