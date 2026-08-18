@@ -1,16 +1,10 @@
 """
-Real lexer -- Sprint 10 (Phases.md v2).
-
-Built on PLY (ply.lex), per PRD.md's tech stack. Tokenizes the C-like
-subset: keywords, identifiers, integer literals, arithmetic/comparison
-operators, punctuation, and both comment styles.
-
-Scope note: the lexer recognizes a slightly larger keyword/operator set
-than the grammar in GrammarLibrary currently defines (SystemDesign.md's
-cLikeGrammar only covers `int`/`return`/`+` so far) -- that's intentional
-and normal: a lexer is commonly built ahead of the parser it will feed.
-The parser (Sprint 11) grows into this token set; it doesn't need to
-consume all of it immediately.
+Real lexer -- Sprint 10 (Phases.md v2), refactored in Sprint 11 to give
+each keyword its own PLY token type (INT, RETURN, IF, ...) instead of one
+generic KEYWORD type. A yacc grammar needs to distinguish 'int' from
+'return' structurally; the frontend-facing Token.type field still
+collapses all of them back to the single coarse TokenType.KEYWORD via
+_TOKEN_TYPE_MAP below, so nothing about the API contract changes.
 
 Public API: `tokenize(source: str) -> LexResult`, returning both the
 token list (in frontend Token shape) and any lexical errors found, so
@@ -23,20 +17,23 @@ from ply import lex
 
 from app.models.compiler import Token, TokenType
 
-KEYWORDS = {
-    "int",
-    "float",
-    "char",
-    "void",
-    "return",
-    "if",
-    "else",
-    "while",
-    "for",
+# value -> specific PLY token type. t_IDENTIFIER looks values up in this
+# dict to decide KEYWORD-vs-IDENTIFIER and which specific keyword token
+# to emit -- required so the yacc grammar (Sprint 11) can structurally
+# distinguish e.g. 'int' from 'return'.
+RESERVED = {
+    "int": "INT",
+    "float": "FLOAT",
+    "char": "CHAR",
+    "void": "VOID",
+    "return": "RETURN",
+    "if": "IF",
+    "else": "ELSE",
+    "while": "WHILE",
+    "for": "FOR",
 }
 
 tokens = (
-    "KEYWORD",
     "IDENTIFIER",
     "NUMBER",
     "EQ",
@@ -56,6 +53,7 @@ tokens = (
     "RBRACE",
     "SEMI",
     "COMMENT",
+    *RESERVED.values(),
 )
 
 # Longest-match-first ordering matters for multi-char operators.
@@ -87,7 +85,7 @@ def t_COMMENT(t):
 
 def t_IDENTIFIER(t):
     r"[a-zA-Z_][a-zA-Z0-9_]*"
-    t.type = "KEYWORD" if t.value in KEYWORDS else "IDENTIFIER"
+    t.type = RESERVED.get(t.value, "IDENTIFIER")
     return t
 
 
@@ -122,7 +120,6 @@ def _column(source: str, lexpos: int) -> int:
 
 
 _TOKEN_TYPE_MAP = {
-    "KEYWORD": TokenType.KEYWORD,
     "IDENTIFIER": TokenType.IDENTIFIER,
     "NUMBER": TokenType.LITERAL,
     "COMMENT": TokenType.COMMENT,
@@ -142,6 +139,9 @@ _TOKEN_TYPE_MAP = {
     "LBRACE": TokenType.PUNCTUATION,
     "RBRACE": TokenType.PUNCTUATION,
     "SEMI": TokenType.PUNCTUATION,
+    # Every reserved-word token type collapses back to the single
+    # frontend-facing KEYWORD category.
+    **dict.fromkeys(RESERVED.values(), TokenType.KEYWORD),
 }
 
 
@@ -155,7 +155,7 @@ def t_error(t):
     t.lexer.skip(1)
 
 
-_lexer = lex.lex()
+lexer = lex.lex()
 
 
 def tokenize(source: str) -> LexResult:
@@ -170,10 +170,10 @@ def tokenize(source: str) -> LexResult:
     # dynamic-module trick, which breaks PLY's function-signature
     # introspection when functions become bound methods -- not worth the
     # complexity here.
-    _lexer.lineno = 1
-    _lexer.input(source)
+    lexer.lineno = 1
+    lexer.input(source)
 
-    for idx, tok in enumerate(_lexer, start=1):
+    for idx, tok in enumerate(lexer, start=1):
         result.tokens.append(
             Token(
                 id=f"t{idx}",

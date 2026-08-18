@@ -1,4 +1,8 @@
-"""/grammar endpoint -- API-spec.md Section 4."""
+"""/grammar endpoint -- API-spec.md Section 4.
+
+Sprint 11: productions below now match app/compiler/parser/parser.py's
+real grammar exactly (previously this was Sprint 9's placeholder, a
+smaller grammar than what's actually implemented)."""
 
 from fastapi import APIRouter, HTTPException
 
@@ -10,17 +14,29 @@ _C_LIKE_GRAMMAR = GrammarDefinition(
     id="c-like-v1",
     name="C-Like Subset Grammar",
     productions=[
-        GrammarProduction(lhs="Program", rhs=["FunctionDecl*"]),
+        GrammarProduction(lhs="program", rhs=["func_decl_list"]),
+        GrammarProduction(lhs="func_decl_list", rhs=["func_decl_list", "func_decl"]),
+        GrammarProduction(lhs="func_decl_list", rhs=["func_decl"]),
         GrammarProduction(
-            lhs="FunctionDecl",
-            rhs=["Type", "IDENTIFIER", "(", "ParamList", ")", "Block"],
+            lhs="func_decl",
+            rhs=["type_spec", "IDENTIFIER", "(", ")", "{", "stmt_list", "}"],
         ),
-        GrammarProduction(lhs="Block", rhs=["{", "Statement*", "}"]),
-        GrammarProduction(lhs="Statement", rhs=["VarDecl", ";"]),
-        GrammarProduction(lhs="Statement", rhs=["ReturnStatement", ";"]),
-        GrammarProduction(lhs="ReturnStatement", rhs=["return", "Expression"]),
-        GrammarProduction(lhs="Expression", rhs=["Expression", "+", "Term"]),
-        GrammarProduction(lhs="Expression", rhs=["Term"]),
+        GrammarProduction(lhs="type_spec", rhs=["int", "|", "float", "|", "char", "|", "void"]),
+        GrammarProduction(lhs="stmt_list", rhs=["stmt_list", "stmt"]),
+        GrammarProduction(lhs="stmt_list", rhs=["stmt", "|", "ε"]),
+        GrammarProduction(lhs="stmt", rhs=["var_decl", ";"]),
+        GrammarProduction(lhs="stmt", rhs=["assign_stmt", ";"]),
+        GrammarProduction(lhs="stmt", rhs=["return_stmt", ";"]),
+        GrammarProduction(lhs="var_decl", rhs=["type_spec", "IDENTIFIER", "=", "expr"]),
+        GrammarProduction(lhs="var_decl", rhs=["type_spec", "IDENTIFIER"]),
+        GrammarProduction(lhs="assign_stmt", rhs=["IDENTIFIER", "=", "expr"]),
+        GrammarProduction(lhs="return_stmt", rhs=["return", "expr"]),
+        GrammarProduction(
+            lhs="expr",
+            rhs=["expr", "+", "expr", "|", "expr", "-", "expr", "|", "expr", "*", "expr", "|", "expr", "/", "expr"],
+        ),
+        GrammarProduction(lhs="expr", rhs=["(", "expr", ")"]),
+        GrammarProduction(lhs="expr", rhs=["IDENTIFIER", "|", "NUMBER"]),
     ],
     sampleProgram="int main() {\n  int x = 5;\n  return x + 2;\n}",
 )

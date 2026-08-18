@@ -4,6 +4,78 @@ All notable changes to SmartCC are documented here, organized by sprint per `Pha
 
 ---
 
+## [Sprint 12] — Real Semantic Analyzer
+
+**Date:** 2026-08-15
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 13
+
+### Added
+- **Real semantic analyzer** (`backend/app/compiler/semantic/analyzer.py`): walks the real AST and performs genuine undeclared-variable detection, duplicate-declaration detection, and unused-variable warnings -- function-level scoping (one scope per `FunctionDecl`, matching the parser's current lack of nested block scopes)
+- `analyze(ast) -> AnalysisResult`: real symbol table + real diagnostics, following the same pattern as `tokenize()` and `parse()`
+- **9 table-driven semantic tests** (`tests/test_semantic.py`) per Testing.md §2.2: clean program, undeclared variable (both in `return` and in assignment), duplicate declaration, the `int x = x;` self-referential edge case (correctly flags `x` as undeclared rather than self-satisfying), unused-variable warning, and function-scope independence (same variable name in two different functions is *not* a duplicate-declaration error)
+- 2 new endpoint-level tests proving detection works for **any** undeclared identifier end-to-end, and duplicate declaration end-to-end
+
+### Removed
+- **The `undeclared_demo` hardcoded-string hack is gone.** Every sprint since 9 routed the demo's "failure" path by checking whether that one specific identifier name appeared in the source. Sprint 12 replaces it with genuine analysis -- verified by testing `my_random_var` and other arbitrary names, never seen in any fixture, correctly triggering the same failure path.
+- **`pipeline.py` shrank from 244 lines to ~95.** The two large canned `CompilationResult` fixtures (`_STUB_SUCCESS`, `_STUB_SEMANTIC_FAILURE`) are deleted entirely -- they're no longer needed now that tokens, AST, symbol table, and diagnostics are all real. This is the incremental-replacement pattern the pipeline's own docstring has described since Sprint 9, finally visible as an actual deletion rather than just a plan.
+
+### Changed
+- A semantically-valid program's `tac`, `optimization`, and `assembly` fields are now `[]`/`None` (genuinely "not implemented yet") rather than continuing to return the old stub's fabricated TAC/assembly data, which would have been actively misleading now that everything upstream of it is real and program-specific. Sprint 13-14 fill these in for real.
+
+### Notes
+- Type-mismatch checking is explicitly **not** implemented this sprint, and not silently skipped either -- `test_semantic.py`'s module docstring notes why: the grammar only produces integer literals so far, so there's no real type-system depth to check yet. Faking a type checker ahead of the grammar supporting multiple literal types would be checking against nothing.
+- Verified against a real running server: an arbitrary identifier never seen in any fixture (`my_random_var`) is correctly flagged undeclared, and an unused-variable warning correctly returns `status: "success"` with a `"warning"`-severity diagnostic (compilation succeeds despite the warning, same convention as real compilers).
+- `pytest` -- 41/41 passing (9 endpoint + 11 lexer + 10 parser + 9 semantic + 2 new end-to-end). `ruff check .` clean.
+
+### Sprint 12 Definition of Done — Checklist
+- [x] Real semantic analyzer implemented, not a stub
+- [x] The `undeclared_demo` hack fully removed, not just supplemented
+- [x] Table-driven unit tests covering the cases Testing.md §2.2 names (undeclared variable, duplicate declaration) plus scope-independence and warning-vs-error distinction
+- [x] Verified against a real running server with a genuinely novel undeclared identifier, not just fixtures
+- [x] Known scope limitations (function-level only, no type checking yet) documented in code, not silently left as gaps
+- [x] `pytest` passes (41/41), `ruff check .` clean
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 13 (real TAC + Optimizer) starts
+
+---
+
+## [Sprint 11] — Real Parser → AST
+
+**Date:** 2026-08-08
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 12
+
+### Added
+- **Real PLY yacc parser** (`backend/app/compiler/parser/parser.py`): function declarations (no parameters yet, documented limitation), variable declarations with optional initializers, assignment statements, return statements, and a standard precedence-climbing expression grammar (`+ - * /` with correct precedence and parenthesization)
+- `parse(source) -> ParseResult`: real AST or genuine syntax errors with line numbers, mirroring the lexer's `tokenize()` pattern
+- **10 table-driven parser unit tests** (`tests/test_parser.py`) per Testing.md §2.2, including operator-precedence correctness (`2 + 3 * 4` parses as `2 + (3*4)`, not `(2+3)*4`), parenthesization override, multi-function programs, and syntax-error detection (missing semicolon, missing closing brace)
+- `pipeline.py` now calls the real parser: **syntax errors on arbitrary input are genuinely detected**, returning `failedAtPhase: "syntax"` with a real message and line number -- not limited to canned fixtures
+- Real AST now flows through for any syntactically valid program, verified against a completely novel two-function program with subtraction (`int add() {...} int sub() {...}`) that was never in any fixture
+
+### Fixed (found during this sprint's own work, not a separate audit)
+- **Lexer refactor left mid-way from planning in the previous session**: `t_IDENTIFIER` still referenced an undefined `KEYWORDS` set (would have crashed at runtime; caught before it shipped, not after) and `_TOKEN_TYPE_MAP` was missing entries for the new per-keyword token types. Completed the refactor properly: each keyword now gets its own PLY token type (`INT`, `RETURN`, `IF`, ...) so the yacc grammar can structurally distinguish them, while the frontend-facing `Token.type` still collapses them all back to the single `KEYWORD` category -- no API contract change.
+- **Comments would have broken every parse.** The grammar has no production for `COMMENT` tokens (no C-like grammar does), but the parser was initially wired to consume the lexer's raw token stream, which includes comments. Fixed via a custom `tokenfunc` that filters `COMMENT` tokens out for the parser specifically, while `lexer.tokenize()` (used by the Token Viewer) still emits them.
+
+### Changed
+- **Grammar Library productions now match the real grammar exactly**, on both sides: `backend/app/routers/grammar.py` and `frontend/src/features/grammar-library/cLikeGrammar.ts` were both updated together (previously the productions only covered `int`/`return`/`+`, a placeholder from Sprint 9). Each file now references the other in a comment so they don't silently drift apart again.
+
+### Notes
+- Verified against a real running server via `curl`: a program with a missing semicolon correctly returns `failedAtPhase: "syntax"`; a genuinely novel multi-function program parses correctly end-to-end.
+- Known limitation carried over from the lexer (documented in `parser.py`'s docstring too): module-level parser/lexer state reset per call, not safe for true request concurrency at current scale.
+- Function parameters aren't parsed yet (`func_decl` always expects empty `()`) -- flagged in the grammar's own docstring, not silently unsupported.
+- `pytest` -- 30/30 passing (8 endpoint + 11 lexer + 10 parser + 1 new syntax-error endpoint test). `ruff check .` clean.
+
+### Sprint 11 Definition of Done — Checklist
+- [x] Real parser implemented (PLY yacc), not a stub
+- [x] Table-driven unit tests including precedence and syntax-error cases
+- [x] Verified against a real running server with a genuinely novel program, not just fixtures
+- [x] Grammar Library docs updated to match the real grammar (frontend + backend both)
+- [x] Known limitations documented in code, not silently left as gaps
+- [x] `pytest` passes (30/30), `ruff check .` clean
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 12 (real Semantic Analyzer) starts
+
+---
+
 ## [Sprint 10] — Real Lexer (PLY)
 
 **Date:** 2026-08-04

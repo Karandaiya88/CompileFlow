@@ -43,6 +43,50 @@ def test_compile_semantic_failure_fixture():
     assert body["diagnostics"][0]["phase"] == "semantic"
 
 
+def test_compile_real_syntax_error():
+    """Sprint 11: a genuinely invalid program (missing semicolon) now
+    fails at the syntax phase with a real diagnostic, not a canned one."""
+    response = client.post(
+        "/api/v1/compile",
+        json={"source": "int main() { int x = 5 return x; }"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["failedAtPhase"] == "syntax"
+    assert body["ast"] is None
+    assert len(body["diagnostics"]) == 1
+    assert body["diagnostics"][0]["phase"] == "syntax"
+
+
+def test_compile_detects_any_undeclared_identifier_not_just_the_demo_one():
+    """Sprint 12: semantic analysis is real now -- this must work for
+    ANY undeclared name, not just the one 'undeclared_demo' string the
+    pipeline used to hardcode-match on before Sprint 12."""
+    response = client.post(
+        "/api/v1/compile",
+        json={"source": "int main() { return some_totally_different_name; }"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["failedAtPhase"] == "semantic"
+    assert "some_totally_different_name" in body["diagnostics"][0]["message"]
+
+
+def test_compile_duplicate_declaration_end_to_end():
+    response = client.post(
+        "/api/v1/compile",
+        json={"source": "int main() {\n  int x = 1;\n  int x = 2;\n  return x;\n}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["failedAtPhase"] == "semantic"
+    assert "already declared" in body["diagnostics"][0]["message"]
+    assert len(body["symbolTable"]) == 1
+
+
 def test_compile_empty_source_returns_400():
     response = client.post("/api/v1/compile", json={"source": "   "})
     assert response.status_code == 400

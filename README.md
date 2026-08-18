@@ -2,7 +2,7 @@
 
 A web-based educational compiler that visualizes every phase of compiler design -- lexical analysis through target code generation -- in one interactive pipeline.
 
-> **Current phase: v2 Sprint 9 -- backend scaffold.** The frontend (v1) is feature-complete on mock data. The backend now exists as a real FastAPI server with routes matching `API-spec.md` exactly, but the compiler pipeline itself is still a stub -- real phases (Lexer, Parser, Semantic Analyzer, Optimizer, Codegen) arrive incrementally across Sprints 10-14. See `Phases.md` for the full roadmap.
+> **Current phase: v2 Sprint 12 -- real Lexer + Parser + Semantic Analyzer.** The frontend (v1) is feature-complete on mock data. The backend now has genuine tokenization, parsing, and semantic analysis -- real lexical, syntax, AND semantic errors on arbitrary input (undeclared variables, duplicate declarations, unused-variable warnings). TAC generation, optimization, and codegen are still stub. See `Phases.md` for the full roadmap.
 
 This is a **monorepo**: `frontend/` and `backend/` are independent, separately-run projects sharing the docs at this root.
 
@@ -86,8 +86,8 @@ smartcc/
 
 - [x] Sprint 9 -- FastAPI scaffold + `/compile`, `/grammar`, `/history` endpoint skeletons (stub pipeline, real HTTP contract)
 - [x] Sprint 10 -- Real Lexer (PLY) -- genuine tokenization + lexical-error detection on arbitrary input
-- [ ] Sprint 11 -- Real Parser → AST
-- [ ] Sprint 12 -- Real Semantic Analyzer
+- [x] Sprint 11 -- Real Parser → AST -- precedence-climbing expression grammar, real syntax-error detection
+- [x] Sprint 12 -- Real Semantic Analyzer -- undeclared/duplicate detection works for any identifier, unused-variable warnings
 - [ ] Sprint 13 -- Real TAC generation + Optimizer
 - [ ] Sprint 14 -- Real target code generation
 - [ ] Sprint 15 -- Frontend `mockAdapter` → `httpAdapter` swap, end-to-end integration

@@ -2,7 +2,7 @@
 
 FastAPI backend for the SmartCC compiler visualizer.
 
-> **Current phase: v2 Sprint 10 -- real Lexer.** Tokenization and lexical-error detection are now real (PLY-based, `app/compiler/lexer/`), verified against arbitrary input. The rest of the pipeline (parsing, semantic analysis, TAC/optimization, codegen) is still a stub -- see `Phases.md` for the Sprint 11-14 roadmap.
+> **Current phase: v2 Sprint 12 -- real Lexer + Parser + Semantic Analyzer.** Tokenization, parsing, and semantic analysis are all real now -- undeclared variables, duplicate declarations, and unused-variable warnings are genuinely detected for any program, not hardcoded to fixtures. TAC generation, optimization, and codegen are still stub -- see `Phases.md` for the Sprint 13-14 roadmap.
 
 ---
 
