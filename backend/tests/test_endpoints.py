@@ -30,6 +30,22 @@ def test_compile_success_fixture():
     assert body["diagnostics"] == []
 
 
+def test_compile_generates_real_tac_and_optimization():
+    """Sprint 13: TAC and optimization are real now -- verify the
+    well-known constant-folding case end-to-end through the API."""
+    response = client.post(
+        "/api/v1/compile",
+        json={"source": "int main() {\n  int x = 5;\n  return x + 2;\n}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "success"
+    assert len(body["tac"]) == 3
+    assert body["optimization"]["passesApplied"] == ["Constant Folding"]
+    assert len(body["optimization"]["after"]) == 2
+    assert body["optimization"]["after"][-1]["arg1"] == "7"
+
+
 def test_compile_semantic_failure_fixture():
     response = client.post(
         "/api/v1/compile",

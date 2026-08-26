@@ -1,29 +1,26 @@
 """
 Pipeline orchestrator.
 
-Sprint 12 update: semantic analysis is now real (app/compiler/semantic),
-so undeclared-variable use, duplicate declarations, and unused-variable
-warnings are genuinely detected for ANY program -- not just the special
-`undeclared_demo` identifier the pipeline used to hardcode-match on
-(Sprint 9-11). That hack is gone as of this sprint; it's no longer
-needed now that real semantic analysis exists.
+Sprint 13 update: TAC generation and optimization are now real
+(app/compiler/optimizer/), so a semantically-valid program gets a real,
+program-specific instruction sequence and a real constant-folding pass
+-- not the empty placeholders Sprint 12 correctly used once the old
+canned fixtures were removed.
 
-TAC generation, optimization, and target codegen are still not
-implemented -- a semantically-valid program returns empty/None for
-those fields rather than fabricated data, which would be actively
-misleading now that everything upstream of it is real. Real phases
-replace these next, per Phases.md v2 roadmap:
-  Sprint 13 -- real TAC generation + Optimizer
-  Sprint 14 -- real target codegen
+Target codegen is still not implemented -- `assembly` stays `[]` until
+Sprint 14, per Phases.md v2 roadmap.
 """
 
 from app.compiler.lexer.lexer import tokenize
+from app.compiler.optimizer.optimizer import optimize
+from app.compiler.optimizer.tac_generator import generate_tac
 from app.compiler.parser.parser import parse
 from app.compiler.semantic.analyzer import analyze
 from app.models.compiler import (
     CompilationResult,
     CompilerPhase,
     CompileStatus,
+    OptimizationDiff,
     SemanticDiagnostic,
     Severity,
 )
@@ -89,14 +86,32 @@ def compile_source(source: str) -> CompilationResult:
     analysis = analyze(parse_result.ast)
     has_error = any(d.severity == Severity.ERROR for d in analysis.diagnostics)
 
+    if has_error:
+        return CompilationResult(
+            status=CompileStatus.FAILED,
+            failedAtPhase=CompilerPhase.SEMANTIC,
+            tokens=lex_result.tokens,
+            ast=parse_result.ast,
+            symbolTable=analysis.symbolTable,
+            diagnostics=analysis.diagnostics,
+            tac=[],
+            optimization=None,
+            assembly=[],
+        )
+
+    tac = generate_tac(parse_result.ast)
+    opt_result = optimize(tac)
+
     return CompilationResult(
-        status=CompileStatus.FAILED if has_error else CompileStatus.SUCCESS,
-        failedAtPhase=CompilerPhase.SEMANTIC if has_error else None,
+        status=CompileStatus.SUCCESS,
+        failedAtPhase=None,
         tokens=lex_result.tokens,
         ast=parse_result.ast,
         symbolTable=analysis.symbolTable,
         diagnostics=analysis.diagnostics,
-        tac=[],
-        optimization=None,
+        tac=tac,
+        optimization=OptimizationDiff(
+            before=tac, after=opt_result.after, passesApplied=opt_result.passes_applied
+        ),
         assembly=[],
     )

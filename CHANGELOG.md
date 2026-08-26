@@ -4,6 +4,36 @@ All notable changes to SmartCC are documented here, organized by sprint per `Pha
 
 ---
 
+## [Sprint 13] — Real TAC Generation + Optimizer
+
+**Date:** 2026-08-19
+**Status:** ✅ Complete — pending Karan's review/approval before Sprint 14
+
+### Added
+- **Real TAC generator** (`backend/app/compiler/optimizer/tac_generator.py`): standard recursive expression-walk producing genuine three-address instructions -- per-function temp counter (`t1, t2, ...` resets per function), function-boundary labels for multi-function programs (data available now; not yet surfaced by the frontend's TAC table, which only has Op/Arg1/Arg2/Result columns as of Sprint 6 -- noted, not silently dropped)
+- **Real optimizer** (`backend/app/compiler/optimizer/optimizer.py`): Constant Folding with forward constant propagation in a single pass -- correct for straight-line code, which is all the grammar produces so far (no branches, so no control-flow graph needed for correctness)
+- `generate_tac(ast)` and `optimize(tac)`: same pattern as every other real phase this project has built (`tokenize`, `parse`, `analyze`)
+- **8 TAC generator tests + 8 optimizer tests**, table-driven per Testing.md §2.2: nested-precedence chaining, per-function temp/label reset, pure-constant folding, partial folding when one operand is a genuinely unknown variable, and **division-by-zero explicitly left unfolded** (verified it neither crashes the optimizer nor silently computes a bogus value)
+- 1 new endpoint test verifying the well-known constant-folding case end-to-end through the actual API response shape
+
+### Notes
+- **Validated against the mock fixture's own claimed behavior, not just "some optimization that happens to work"**: the very first thing implemented was reproducing `x = 5; return x + 2;` folding to `x = 5; return 7;` -- the exact optimization the UI's Sprint 2-12 mock fixture always claimed to demonstrate. Real output matches that shape exactly, which is what makes this trustworthy rather than coincidentally plausible.
+- Verified against a real running server with a genuinely novel program (two variables, chained multiply-then-add: `a=10; b=20; return a + b*2;`) -- correctly folds all the way through both variables and the precedence-correct TAC to `return 50`, something no fixture ever demonstrated.
+- `pytest` -- 57/57 passing (10 endpoint + 11 lexer + 10 parser + 9 semantic + 8 TAC + 8 optimizer + 1 new). `ruff check .` clean.
+- `assembly` is still `[]` -- target codegen is Sprint 14's job, the last real compiler phase remaining.
+
+### Sprint 13 Definition of Done — Checklist
+- [x] Real TAC generator implemented, not a stub
+- [x] Real optimizer implemented (Constant Folding + propagation), not a stub
+- [x] Table-driven unit tests, including an edge case (division by zero) that could plausibly crash or silently misbehave if handled carelessly
+- [x] Output validated against the exact optimization the mock fixture always claimed to demonstrate, then verified further against a genuinely novel program
+- [x] Known gaps (labels not yet shown in UI, no control-flow graph since no branches exist yet) documented in code, not silently left
+- [x] `pytest` passes (57/57), `ruff check .` clean
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 14 (real target codegen, the final phase) starts
+
+---
+
 ## [Sprint 12] — Real Semantic Analyzer
 
 **Date:** 2026-08-15

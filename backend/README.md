@@ -2,7 +2,7 @@
 
 FastAPI backend for the SmartCC compiler visualizer.
 
-> **Current phase: v2 Sprint 12 -- real Lexer + Parser + Semantic Analyzer.** Tokenization, parsing, and semantic analysis are all real now -- undeclared variables, duplicate declarations, and unused-variable warnings are genuinely detected for any program, not hardcoded to fixtures. TAC generation, optimization, and codegen are still stub -- see `Phases.md` for the Sprint 13-14 roadmap.
+> **Current phase: v2 Sprint 13 -- real Lexer + Parser + Semantic Analyzer + TAC/Optimizer.** Everything except target codegen is real now: tokenization, parsing, semantic analysis, TAC generation, and constant-folding optimization. Codegen is the last remaining stub -- see `Phases.md` for Sprint 14.
 
 ---
 

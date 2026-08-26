@@ -2,7 +2,7 @@
 
 A web-based educational compiler that visualizes every phase of compiler design -- lexical analysis through target code generation -- in one interactive pipeline.
 
-> **Current phase: v2 Sprint 12 -- real Lexer + Parser + Semantic Analyzer.** The frontend (v1) is feature-complete on mock data. The backend now has genuine tokenization, parsing, and semantic analysis -- real lexical, syntax, AND semantic errors on arbitrary input (undeclared variables, duplicate declarations, unused-variable warnings). TAC generation, optimization, and codegen are still stub. See `Phases.md` for the full roadmap.
+> **Current phase: v2 Sprint 13 -- real Lexer + Parser + Semantic Analyzer + TAC/Optimizer.** The frontend (v1) is feature-complete on mock data. The backend now has genuine tokenization, parsing, semantic analysis, TAC generation, AND constant-folding optimization -- everything except target codegen is real. See `Phases.md` for the full roadmap.
 
 This is a **monorepo**: `frontend/` and `backend/` are independent, separately-run projects sharing the docs at this root.
 
@@ -88,7 +88,7 @@ smartcc/
 - [x] Sprint 10 -- Real Lexer (PLY) -- genuine tokenization + lexical-error detection on arbitrary input
 - [x] Sprint 11 -- Real Parser → AST -- precedence-climbing expression grammar, real syntax-error detection
 - [x] Sprint 12 -- Real Semantic Analyzer -- undeclared/duplicate detection works for any identifier, unused-variable warnings
-- [ ] Sprint 13 -- Real TAC generation + Optimizer
+- [x] Sprint 13 -- Real TAC generation + Optimizer -- constant folding verified against a novel 2-variable program
 - [ ] Sprint 14 -- Real target code generation
 - [ ] Sprint 15 -- Frontend `mockAdapter` → `httpAdapter` swap, end-to-end integration
 
