@@ -4,15 +4,18 @@ import type {
   GrammarDefinition,
 } from '@/types/compiler';
 import { mockAdapter } from './mockAdapter';
+import { httpAdapter } from './httpAdapter';
 
 /**
  * Backend-ready service contract.
  * Source of truth: Architecture.md Section 4.2.
  *
- * v1 (current): backed by mockAdapter (simulated JSON responses).
- * v2 (future):  swap to httpAdapter hitting the real FastAPI backend
- *               (see API-spec.md). No component or hook using this
- *               service should need to change when that swap happens.
+ * v1: backed by mockAdapter (simulated JSON responses).
+ * v2 (Sprint 15): httpAdapter now exists and hits the real FastAPI
+ * backend (API-spec.md). The switch below reads VITE_USE_MOCK so both
+ * remain available -- default stays mock so `npm run dev` keeps working
+ * standalone with no backend running, per the v1 quick-start promise in
+ * the README. Set VITE_USE_MOCK=false to exercise the real backend.
  */
 export interface CompileOptions {
   targetOptimizations?: string[];
@@ -25,6 +28,10 @@ export interface CompilerService {
   getHistory(projectId: string): Promise<CompilationRecord[]>;
 }
 
-// Sprint 1: always mockAdapter. A VITE_USE_MOCK flag / httpAdapter swap
-// arrives in v2 per Architecture.md Section 8 -- not built prematurely here.
-export const compilerService: CompilerService = mockAdapter;
+const useMock = import.meta.env.VITE_USE_MOCK !== 'false';
+
+/** Exposed so UI (e.g. Settings) can honestly reflect which adapter is
+ * active, rather than showing mock-only controls as if they always apply. */
+export const isMockMode = useMock;
+
+export const compilerService: CompilerService = useMock ? mockAdapter : httpAdapter;

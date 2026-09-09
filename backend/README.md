@@ -2,7 +2,7 @@
 
 FastAPI backend for the SmartCC compiler visualizer.
 
-> **Current phase: v2 Sprint 13 -- real Lexer + Parser + Semantic Analyzer + TAC/Optimizer.** Everything except target codegen is real now: tokenization, parsing, semantic analysis, TAC generation, and constant-folding optimization. Codegen is the last remaining stub -- see `Phases.md` for Sprint 14.
+> **v2 complete.** Every real compiler phase is implemented (tokenization, parsing, semantic analysis, TAC generation, optimization, codegen), and the frontend now genuinely connects to this server (Sprint 15 -- see the root `README.md`'s "Connecting the Frontend" instructions, now accurate rather than forward-looking).
 
 ---
 
@@ -65,7 +65,7 @@ VITE_USE_MOCK=false
 VITE_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
-**Note:** as of Sprint 9, the frontend's `compilerService` still always uses `mockAdapter` (Architecture.md ยง8) -- the `httpAdapter` that reads this env flag hasn't been built yet. That's Sprint 15's job (the mock-to-real swap), once all five real compiler phases exist. Running this backend now is useful for API testing (`/docs`) and contract verification, not yet for driving the actual frontend UI.
+**This is now fully functional** (as of Sprint 15) -- the frontend's `httpAdapter` genuinely calls these endpoints and renders real results. CORS is pre-configured for `http://localhost:5173` (Vite's default dev port); if your frontend runs on a different port, update `CORS_ORIGINS` in `backend/.env` to match.
 
 ## Testing This Sprint's Work
 

@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { useSettingsStore } from '@/features/settings/store/settingsStore'
+import { isMockMode } from '@/services/compilerService'
 
 export function SettingsPage() {
   const editorFontSize = useSettingsStore((s) => s.editorFontSize)
@@ -14,6 +15,20 @@ export function SettingsPage() {
       <PageHeader title="Settings" description="Configure your SmartCC preferences." />
 
       <div className="flex max-w-xl flex-col gap-4">
+        <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Compiler Backend</h3>
+            <Badge tone={isMockMode ? 'info' : 'success'}>
+              {isMockMode ? 'Mock (offline)' : 'Real backend'}
+            </Badge>
+          </div>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            {isMockMode
+              ? 'Running on realistic mock data -- no backend server required. Set VITE_USE_MOCK=false in your .env to connect to the real FastAPI backend (see backend/README.md).'
+              : 'Connected to the real FastAPI compiler backend. Every compile request runs through the actual lexer, parser, semantic analyzer, optimizer, and codegen.'}
+          </p>
+        </Card>
+
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">Theme</h3>
@@ -46,28 +61,30 @@ export function SettingsPage() {
           </p>
         </Card>
 
-        <Card>
-          <h3 className="mb-3 text-sm font-semibold">Simulated Compile Delay</h3>
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              min={0}
-              max={2000}
-              step={100}
-              value={compileDelayMs}
-              onChange={(e) => setCompileDelayMs(Number(e.target.value))}
-              className="flex-1 accent-[var(--color-accent-primary)]"
-            />
-            <span className="w-14 font-mono text-sm text-[var(--color-text-secondary)]">
-              {compileDelayMs}ms
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-            Controls how long the mock adapter takes to "compile" -- useful for demoing the
-            loading state. Has no effect once a real backend exists (v2+); this control will
-            be removed at that point rather than left as dead UI.
-          </p>
-        </Card>
+        {isMockMode && (
+          <Card>
+            <h3 className="mb-3 text-sm font-semibold">Simulated Compile Delay</h3>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={2000}
+                step={100}
+                value={compileDelayMs}
+                onChange={(e) => setCompileDelayMs(Number(e.target.value))}
+                className="flex-1 accent-[var(--color-accent-primary)]"
+              />
+              <span className="w-14 font-mono text-sm text-[var(--color-text-secondary)]">
+                {compileDelayMs}ms
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+              Controls how long the mock adapter takes to "compile" -- useful for demoing the
+              loading state. Hidden now that you're on the real backend (see Compiler Backend
+              above) rather than left as a control that quietly does nothing.
+            </p>
+          </Card>
+        )}
       </div>
     </>
   )

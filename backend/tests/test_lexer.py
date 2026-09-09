@@ -1,11 +1,4 @@
-"""
-Lexer correctness tests -- Testing.md Section 2.2: "table-driven tests:
-given source string -> expect exact token list (type, value, line, column)."
 
-Each fixture here is a manually-verified expectation, not something the
-lexer itself generated -- these are the tests that actually catch bugs
-in the lexer, not tests that just confirm the lexer agrees with itself.
-"""
 
 from app.compiler.lexer.lexer import tokenize
 from app.models.compiler import TokenType

@@ -1,11 +1,4 @@
-"""
-/compile endpoint -- API-spec.md Section 3.
 
-Even on a compilation *failure* (e.g. semantic error), this returns
-HTTP 200 with status="failed" in the body -- compilation failure is a
-valid, expected product outcome, not a server error. Only genuine
-server-side faults return non-200 (API-spec.md Section 7).
-"""
 
 from fastapi import APIRouter, HTTPException
 

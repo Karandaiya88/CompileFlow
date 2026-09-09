@@ -1,11 +1,4 @@
-"""
-Integration tests for Sprint 9's endpoint scaffold -- Testing.md Section 3.
 
-These test the request/response *contract* (matches API-spec.md), not
-compiler correctness -- there's no real compiler yet. Per-algorithm
-correctness tests (Testing.md Section 2.2) start in Sprint 10 once the
-real lexer exists.
-"""
 
 from fastapi.testclient import TestClient
 
@@ -44,6 +37,22 @@ def test_compile_generates_real_tac_and_optimization():
     assert body["optimization"]["passesApplied"] == ["Constant Folding"]
     assert len(body["optimization"]["after"]) == 2
     assert body["optimization"]["after"][-1]["arg1"] == "7"
+
+
+def test_compile_generates_real_assembly():
+    """Sprint 14: assembly is real now -- this completes every phase.
+    Same program's assembly must match the shape the mock fixture always
+    claimed to produce."""
+    response = client.post(
+        "/api/v1/compile",
+        json={"source": "int main() {\n  int x = 5;\n  return x + 2;\n}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assembly = body["assembly"]
+    assert len(assembly) == 4
+    assert assembly[0] == {"instruction": "MOV", "operands": ["EAX", "5"], "comment": None}
+    assert assembly[-1] == {"instruction": "RET", "operands": [], "comment": None}
 
 
 def test_compile_semantic_failure_fixture():

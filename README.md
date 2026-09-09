@@ -2,7 +2,7 @@
 
 A web-based educational compiler that visualizes every phase of compiler design -- lexical analysis through target code generation -- in one interactive pipeline.
 
-> **Current phase: v2 Sprint 13 -- real Lexer + Parser + Semantic Analyzer + TAC/Optimizer.** The frontend (v1) is feature-complete on mock data. The backend now has genuine tokenization, parsing, semantic analysis, TAC generation, AND constant-folding optimization -- everything except target codegen is real. See `Phases.md` for the full roadmap.
+> **v2 complete — the frontend now genuinely talks to the real backend.** Set `VITE_USE_MOCK=false` in `frontend/.env` (with the backend running) to see the actual compiler power the UI end-to-end. Default remains mock (`VITE_USE_MOCK=true`), so `npm run dev` still works standalone with zero backend setup. See `Phases.md` for what v3 might look like next -- not started without confirming scope first.
 
 This is a **monorepo**: `frontend/` and `backend/` are independent, separately-run projects sharing the docs at this root.
 
@@ -38,7 +38,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Runs entirely on mock JSON fixtures -- no backend required yet (the mock-to-real swap is Sprint 15).
+Runs on mock JSON fixtures by default (`VITE_USE_MOCK=true` in `.env`) -- no backend required. Set `VITE_USE_MOCK=false` (with the backend running, see below) to use the real compiler instead.
 
 ### Backend
 
@@ -89,8 +89,8 @@ smartcc/
 - [x] Sprint 11 -- Real Parser → AST -- precedence-climbing expression grammar, real syntax-error detection
 - [x] Sprint 12 -- Real Semantic Analyzer -- undeclared/duplicate detection works for any identifier, unused-variable warnings
 - [x] Sprint 13 -- Real TAC generation + Optimizer -- constant folding verified against a novel 2-variable program
-- [ ] Sprint 14 -- Real target code generation
-- [ ] Sprint 15 -- Frontend `mockAdapter` → `httpAdapter` swap, end-to-end integration
+- [x] Sprint 14 -- Real target codegen -- ALL 6 real compiler phases now complete, verified end-to-end on a novel program
+- [x] Sprint 15 -- Frontend `mockAdapter` → `httpAdapter` swap -- verified end-to-end against a live server, including CORS
 
 See `CHANGELOG.md` for detailed per-sprint entries and `Phases.md` for the full v1-v4 roadmap.
 

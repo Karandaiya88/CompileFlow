@@ -1,16 +1,21 @@
 """
 Pipeline orchestrator.
 
-Sprint 13 update: TAC generation and optimization are now real
-(app/compiler/optimizer/), so a semantically-valid program gets a real,
-program-specific instruction sequence and a real constant-folding pass
--- not the empty placeholders Sprint 12 correctly used once the old
-canned fixtures were removed.
+Sprint 14 update: target codegen is now real (app/compiler/codegen), so
+a semantically-valid program gets a real, program-specific assembly
+listing -- not the empty placeholder Sprint 13 correctly used.
 
-Target codegen is still not implemented -- `assembly` stays `[]` until
-Sprint 14, per Phases.md v2 roadmap.
+This completes every real compiler phase. The pipeline no longer
+contains any stub or placeholder logic for the compilation itself --
+tokens, AST, symbol table, diagnostics, TAC, optimization, and assembly
+are all genuinely computed from whatever source the caller submits.
+
+Sprint 15 (the only thing left in v2) doesn't touch this file at all --
+it's purely a frontend change: swapping `mockAdapter` for an `httpAdapter`
+that calls this API instead. See Phases.md.
 """
 
+from app.compiler.codegen.codegen import generate_assembly
 from app.compiler.lexer.lexer import tokenize
 from app.compiler.optimizer.optimizer import optimize
 from app.compiler.optimizer.tac_generator import generate_tac
@@ -27,15 +32,9 @@ from app.models.compiler import (
 
 
 def compile_source(source: str) -> CompilationResult:
-    """Pipeline entry point.
-
-    Real: tokenization, parsing, and semantic analysis -- lexical,
-    syntax, and semantic errors are all genuinely detected on arbitrary
-    input now.
-    Still stub: TAC generation, optimization, and codegen (Sprint 13-14)
-    -- a semantically-valid program gets empty/None for those fields,
-    not fabricated data.
-    """
+    """Pipeline entry point. Every phase is real: tokenization, parsing,
+    semantic analysis, TAC generation, optimization, and codegen. No
+    stub or placeholder data remains anywhere in this function."""
     if not source.strip():
         raise ValueError("Source code is empty -- nothing to compile.")
 
@@ -101,6 +100,7 @@ def compile_source(source: str) -> CompilationResult:
 
     tac = generate_tac(parse_result.ast)
     opt_result = optimize(tac)
+    assembly = generate_assembly(opt_result.after)
 
     return CompilationResult(
         status=CompileStatus.SUCCESS,
@@ -113,5 +113,5 @@ def compile_source(source: str) -> CompilationResult:
         optimization=OptimizationDiff(
             before=tac, after=opt_result.after, passesApplied=opt_result.passes_applied
         ),
-        assembly=[],
+        assembly=assembly,
     )

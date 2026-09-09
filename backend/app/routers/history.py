@@ -1,5 +1,4 @@
-"""/history endpoint -- API-spec.md Section 5. In-memory stub for
-Sprint 9; real persistence arrives with the database in v3 (Phases.md)."""
+
 
 from fastapi import APIRouter
 

@@ -4,6 +4,83 @@ All notable changes to SmartCC are documented here, organized by sprint per `Pha
 
 ---
 
+## [Sprint 15] — Frontend ↔ Backend Integration (v2 Complete)
+
+**Date:** 2026-08-27
+**Status:** ✅ Complete — **v2 finished.** Pending Karan's final review.
+
+### Added
+- **`httpAdapter`** (`frontend/src/services/httpAdapter.ts`): real implementation of the `CompilerService` interface against the FastAPI backend (Sprints 9-14), matching `API-spec.md` exactly. Same shape as `mockAdapter` -- zero component/hook changes needed anywhere in the app, exactly as `Architecture.md` §4.2/§8 promised back in Sprint 1
+- **`HttpAdapterError`**: distinguishes two real-world failure modes with different messages -- a genuine server-unreachable case (`fetch` itself throws: DNS failure, connection refused, CORS block) vs. an HTTP error response (4xx/5xx with a real backend-provided message)
+- Env-based adapter switch in `compilerService.ts`: `VITE_USE_MOCK` (default `true`, so `npm run dev` keeps working standalone with zero backend setup) flips to the real backend when set to `false`
+- `isMockMode` exported from `compilerService.ts` so the UI can honestly reflect which backend is active, rather than showing mock-only controls as if they always apply
+- **Settings page updated accordingly**: new "Compiler Backend" card shows Mock vs. Real Backend status; the "Simulated Compile Delay" control (which only ever affected the mock adapter) now only renders in mock mode -- fulfilling the promise made in its own Sprint 8 copy ("will be removed... rather than left as dead UI")
+- `vite-env.d.ts` for typed `import.meta.env` access
+
+### Fixed
+- **`oxlint` was silently scanning all of `node_modules`** (17,703 files, 65k+ warnings) on a fresh install -- a real regression from whatever oxlint patched in a recent version bump, invisible until re-verified from a clean install. Added `.oxlintrc.json` with explicit `ignorePatterns` for `node_modules`/`dist`/`build`/`coverage`. Back to 71 files, 0 warnings.
+- **Missing `ply` in `requirements.txt`** (caught by Karan while following the README setup steps on his own machine) -- `ply` was installed in every verification environment throughout Sprints 10-14 but never actually added to the pinned requirements file, so a completely fresh `pip install -r requirements-dev.txt` would have failed with `ModuleNotFoundError: No module named 'ply'`. This is exactly the kind of gap that only surfaces when someone actually follows your own setup instructions from scratch -- which is precisely what happened.
+
+### Verified
+- **Real end-to-end integration**, not just isolated unit tests: started the actual backend server and exercised the adapter's exact request/response/error-handling logic against it -- successful compile (16 tokens, real assembly, real optimization), `getGrammar`, `getHistory` (correctly unwraps the paginated `{total, items}` shape into a flat array per the `CompilerService` interface), the empty-source 400 error path, and the server-unreachable path (wrong port) -- all producing the correct `HttpAdapterError` messages.
+- **CORS confirmed working end-to-end**: a request with `Origin: http://localhost:5173` (the frontend's dev server) correctly receives `access-control-allow-origin: http://localhost:5173` from the backend -- a real browser won't be blocked.
+- **Frontend builds successfully in both modes** (`VITE_USE_MOCK=true` and `=false`) with zero TypeScript errors; the `false` build is measurably smaller (Settings page chunk: 2.13kB vs 2.90kB) because Vite's compile-time env substitution correctly tree-shakes the mock-only compile-delay control out of the real-backend bundle -- concrete proof the env switch takes effect at build time, not just at runtime.
+- `pytest` -- 64/64 passing (no backend logic changed this sprint). `tsc -b`, `oxlint`, and `npm run build` all clean on the frontend.
+
+### This completes v2
+Every phase promised in `Phases.md`'s v2 roadmap (Sprints 9-15) is done: a real FastAPI backend with a genuine 6-phase compiler (lexer, parser, semantic analyzer, TAC generator, optimizer, codegen), now actually reachable from the frontend UI built in v1. Per `Phases.md` §6 Rule 3, this is a natural re-baseline point before deciding what v3 looks like (persistence/database, multi-project support, auth) -- not something to start without confirming scope first, the same way v1→v2 was confirmed before Sprint 9.
+
+### Sprint 15 Definition of Done — Checklist
+- [x] `httpAdapter` implements the full `CompilerService` interface against the real backend
+- [x] Adapter swap requires zero component/hook changes (verified: no file outside `services/` and one `SettingsPage` UI-honesty update was touched)
+- [x] Real end-to-end verification against a live server (not just mocked/simulated), including CORS
+- [x] Both `VITE_USE_MOCK` modes build successfully
+- [x] Two bugs found via Karan actually running the project independently, both fixed and explained rather than just patched silently
+- [x] `pytest` (64/64), `tsc -b`, `oxlint` (0 warnings), `npm run build` all clean
+- [x] `CHANGELOG.md` updated
+- [ ] Final review from Karan — **v2 complete pending this approval**
+
+---
+
+## [Sprint 14] — Real Target Codegen (Final Compiler Phase)
+
+**Date:** 2026-08-20
+**Status:** ✅ Complete — **every real compiler phase is now implemented.** Pending Karan's review/approval before Sprint 15 (the last item in v2).
+
+### Added
+- **Real codegen** (`backend/app/compiler/codegen/codegen.py`): translates optimized TAC into a simplified x86-style assembly listing -- flat pseudo-memory addressing (`[x]`, `[t1]`) with EAX as the sole working register. Explicitly documented as an educational simplification (no real register allocation, stack frames, or calling convention), not silently implied to be a real x86 backend
+- `generate_assembly(tac) -> list[AssemblyLine]`, same pattern as every other real phase (`tokenize`, `parse`, `analyze`, `generate_tac`, `optimize`)
+- **6 codegen unit tests** per Testing.md §2.2, including a defensive-branch test (return with no expression) exercised directly since the current grammar always requires a return expression
+- 1 new endpoint test verifying real assembly end-to-end, matching the exact shape the mock fixture claimed to produce since Sprint 2
+
+### This completes every real compiler phase
+`pipeline.py`'s `compile_source()` now contains **zero stub or placeholder logic** for the compilation itself -- tokens, AST, symbol table, diagnostics, TAC, optimization, and assembly are all genuinely computed from whatever source the caller submits. Verified end-to-end against a fully novel program never seen in any fixture or test:
+
+```
+int calc() {
+  int price = 100;
+  int tax = 15;
+  return price + tax * 2;
+}
+```
+correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all the way through precedence to `return 130`, and emits the matching 6-line assembly listing -- via a real running server, not `TestClient`.
+
+### Notes
+- `pytest` -- 64/64 passing (11 endpoint + 11 lexer + 10 parser + 9 semantic + 8 TAC + 8 optimizer + 6 codegen + 1 new). `ruff check .` clean.
+- **Sprint 15 is the only remaining item in v2**, and it doesn't touch the backend at all: building the frontend's `httpAdapter` and swapping it in for `mockAdapter` (Architecture.md §4.2, §8), so the UI built in v1 finally talks to this real backend instead of fixtures.
+
+### Sprint 14 Definition of Done — Checklist
+- [x] Real codegen implemented, not a stub
+- [x] Table-driven unit tests, including a defensive-branch case
+- [x] Output validated against the exact assembly shape the mock fixture always claimed to produce
+- [x] Verified end-to-end (all 6 real phases together) against a genuinely novel program via a real running server
+- [x] Simplifications (flat memory model, no register allocation) documented in code, not silently implied otherwise
+- [x] `pytest` passes (64/64), `ruff check .` clean
+- [x] `CHANGELOG.md` updated
+- [ ] Explicit approval from Karan before Sprint 15 (frontend `httpAdapter` swap) starts
+
+---
+
 ## [Sprint 13] — Real TAC Generation + Optimizer
 
 **Date:** 2026-08-19
