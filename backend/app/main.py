@@ -1,4 +1,10 @@
+"""
+SmartCC backend -- FastAPI app entry point.
 
+Sprint 9 scaffold: routes exist and match API-spec.md exactly, but the
+compiler pipeline behind /compile is still a stub (app/compiler/pipeline.py).
+Real compiler phases replace the stub incrementally across Sprints 10-14.
+"""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

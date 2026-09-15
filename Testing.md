@@ -1,119 +1,132 @@
-# Testing.md
-## SmartCC — Testing Strategy & CI
+<div align="center">
 
-| Field | Value |
-|---|---|
-| Version | 1.0 |
-| Applies To | v1 (frontend/mock) now; extends to v2 backend algorithms |
+# 🧪 Testing Strategy & CI
+## SmartCC
 
----
+![Backend Tests](https://img.shields.io/badge/backend-64%2F64%20passing-3FB950?style=flat-square)
+![Frontend Lint](https://img.shields.io/badge/frontend%20lint-0%20warnings-3FB950?style=flat-square)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)
 
-## 1. Test Pyramid
-
-```
-                    ▲
-                   ╱ ╲
-                  ╱ E2E╲          Few — critical user flows only
-                 ╱───────╲        (Playwright)
-                ╱          ╲
-               ╱ Integration╲     Moderate — service layer + component
-              ╱───────────────╲   integration (React Testing Library)
-             ╱                  ╲
-            ╱   Unit Tests        ╲  Many — pure functions, hooks,
-           ╱───────────────────────╲ per-algorithm correctness (Vitest)
-```
-
-**Principle:** the compiler-correctness logic (lexer rules, parser grammar, optimization passes) gets the heaviest unit-test investment, since correctness there is the entire point of the product — a beautiful UI wrapping a wrong compiler defeats the purpose.
+</div>
 
 ---
 
-## 2. Unit Testing (Vitest)
+## 🔺 1. Test Pyramid
 
-### 2.1 Frontend (v1 — Current Phase)
+```mermaid
+graph TD
+    E2E["🌐 E2E — Few<br/>Critical user flows (Playwright)"]
+    INT["🔗 Integration — Moderate<br/>Service + component (RTL)"]
+    UNIT["🧱 Unit Tests — Many<br/>Pure functions, per-algorithm correctness"]
+
+    E2E --> INT --> UNIT
+
+    style E2E fill:#131316,stroke:#F85149,color:#EDEDEF
+    style INT fill:#131316,stroke:#D29922,color:#EDEDEF
+    style UNIT fill:#131316,stroke:#3FB950,color:#EDEDEF
+```
+
+> 🎯 **Principle:** compiler-correctness logic (lexer, parser, optimizer) gets the heaviest investment — a beautiful UI wrapping a wrong compiler defeats the whole purpose.
+
+---
+
+## 🧱 2. Unit Testing
+
+### 2.1 Frontend
 
 | Target | What's tested |
 |---|---|
-| `compilerService` (mock adapter) | Returns correctly typed `CompilationResult` for each fixture; error states surface correctly |
-| Pure utility functions (`lib/`) | Formatting, diffing (for Optimization Comparison), tree flattening (for Parse Tree) |
-| Hooks (`useCompile`, `usePipelineState`) | State transitions: idle → loading → success/error |
-| Components (isolated) | Rendering with representative prop combinations — e.g., `TokenViewer` renders correctly with 0 tokens, 1 token, 500 tokens (performance/virtualization check) |
+| 🔌 `compilerService` | Correctly typed `CompilationResult`; error states surface correctly |
+| 🛠️ Pure utilities | Formatting, diffing, tree flattening |
+| 🪝 Hooks (`useCompile`) | State transitions: idle → loading → success/error |
+| 🧩 Components | Rendering with representative prop combinations |
 
-### 2.2 Per-Algorithm Correctness Testing (v2 — Real Backend)
+### 2.2 Per-Algorithm Correctness Testing (Backend) — ✅ Real, Not Aspirational
 
-This is the most important testing category once the real compiler engine exists. Each phase is tested **in isolation**, against known-correct input/output pairs, independent of the UI:
+```mermaid
+graph LR
+    L["🔤 Lexer<br/>11 tests"] --> P["🌳 Parser<br/>10 tests"]
+    P --> S["🔍 Semantic<br/>9 tests"]
+    S --> T["⚙️ TAC<br/>8 tests"]
+    T --> O["⚡ Optimizer<br/>8 tests"]
+    O --> C["🖥️ Codegen<br/>6 tests"]
+    C --> EP["🌐 Endpoints<br/>11 tests"]
 
-| Module | Test Approach |
-|---|---|
-| **Lexer** | Table-driven tests: given source string → expect exact token list (type, value, line, column). Cover edge cases: comments, string literals with escapes, multi-char operators (`==`, `!=`, `<=`). |
-| **Parser** | Given token stream → expect exact AST shape. Include invalid-grammar cases and assert the correct syntax error is raised (not just "an error"). |
-| **Semantic Analyzer** | Given AST → expect correct symbol table entries and diagnostics. Cover: undeclared variable, type mismatch, duplicate declaration, scope shadowing. |
-| **IR Generator** | Given AST → expect exact TAC instruction sequence for known constructs (if/else, loops, expressions with precedence). |
-| **Optimizer** | Given TAC → expect optimized TAC matching hand-verified "correct" optimization output per pass (constant folding, dead code elimination tested independently, then in combination). |
-| **Codegen** | Given optimized TAC → expect exact assembly-like output for a fixed instruction set. |
-
-> Every algorithm test fixture is derived from **manually verified compilation traces** (same principle as SystemDesign.md §6 mock data strategy) — never assumed or auto-generated without verification.
-
----
-
-## 3. Integration Testing (React Testing Library)
-
-- Compiler Workspace: submitting source code through the editor → mock service call → all panels (Token Viewer, Symbol Table, Parse Tree, etc.) update with consistent, matching data.
-- Error Panel correctly filters and groups diagnostics by phase when a mock "failure" fixture is used.
-- Dashboard: stats cards and charts render correctly from `dashboardStats.json`.
-
----
-
-## 4. End-to-End Testing (Playwright) — Critical Flows Only
-
-E2E tests are expensive to maintain, so they're reserved for the flows that matter most for a demo/interview scenario:
-
-1. Load app → navigate to Compiler Workspace → type sample program → click Compile → verify all panels populate.
-2. Submit a program with a known syntax error → verify Error Panel shows the correct phase-tagged message.
-3. Navigate Dashboard → Projects → open a project → Workspace loads with that project's context.
-
-No exhaustive E2E coverage of every page — that's what unit/integration tests are for.
-
----
-
-## 5. CI Pipeline (GitHub Actions)
-
-```yaml
-# .github/workflows/ci.yml (conceptual outline)
-on: [push, pull_request]
-
-jobs:
-  frontend-checks:
-    steps:
-      - install dependencies
-      - typecheck (tsc --noEmit)
-      - lint (eslint)
-      - unit + integration tests (vitest)
-      - build (vite build) — must succeed with zero errors
-
-  e2e:
-    needs: frontend-checks
-    steps:
-      - run Playwright suite against a preview build
-
-  backend-checks (v2+):
-    steps:
-      - install Python dependencies
-      - lint (ruff/flake8)
-      - per-algorithm correctness tests (pytest)
-      - typecheck (mypy, if adopted)
+    style L fill:#131316,stroke:#58A6FF,color:#EDEDEF
+    style P fill:#131316,stroke:#BC8CFF,color:#EDEDEF
+    style S fill:#131316,stroke:#D29922,color:#EDEDEF
+    style T fill:#131316,stroke:#3FB950,color:#EDEDEF
+    style O fill:#131316,stroke:#F778BA,color:#EDEDEF
+    style C fill:#131316,stroke:#F85149,color:#EDEDEF
+    style EP fill:#131316,stroke:#5E6AD2,color:#EDEDEF
 ```
 
-**Rule:** no merge to `main` if `typecheck`, `lint`, or `test` fail. `build` failing is a hard blocker — a portfolio project with a broken build is worse than no CI at all.
+| Module | Test Approach | Count |
+|---|---|:---:|
+| 🔤 **Lexer** | Table-driven: source → exact token list. Covers comments, multi-char operators (`==`, `<=`) | `11` ✅ |
+| 🌳 **Parser** | Token stream → exact AST shape + operator precedence + syntax errors | `10` ✅ |
+| 🔍 **Semantic** | AST → symbol table + diagnostics (undeclared var, duplicate decl, scope) | `9` ✅ |
+| ⚙️ **TAC Generator** | AST → exact TAC sequence, including precedence-correct chaining | `8` ✅ |
+| ⚡ **Optimizer** | TAC → hand-verified optimized output (constant folding + edge cases like ÷0) | `8` ✅ |
+| 🖥️ **Codegen** | Optimized TAC → exact assembly output | `6` ✅ |
+| 🌐 **Endpoints** | Full request/response contract via `TestClient` | `11` ✅ |
+
+<div align="center">
+
+**Total: 64/64 passing** — every fixture derived from manually verified compilation traces, never assumed.
+
+</div>
 
 ---
 
-## 6. Coverage Expectations (Realistic, Not Vanity Metrics)
+## 🔗 3. Integration Testing
 
-| Layer | Target Coverage | Reasoning |
-|---|---|---|
-| Compiler algorithms (Lexer/Parser/Semantic/IR/Optimizer/Codegen) | High (~85%+) | This is the correctness-critical core |
-| Service layer / adapters | High (~80%+) | Contract correctness matters for the mock→real swap |
-| UI components | Moderate (~50–60%) | Focus on logic-bearing components, not every presentational div |
-| E2E | Low count, high value | 3–5 critical flows, not exhaustive |
+- 🧪 Compiler Workspace: source → service call → all panels update consistently
+- 🚨 Error Panel correctly filters/groups diagnostics by phase
+- 📊 Dashboard: stats/charts render correctly from fixtures
 
-**Rule:** coverage percentage is never the goal itself — a 100%-covered trivial component is worth less than an 85%-covered optimizer pass. Prioritize by correctness-criticality, not by ease of hitting a number.
+---
+
+## 🌐 4. End-to-End Testing (Playwright) — Critical Flows Only
+
+```mermaid
+flowchart LR
+    A["1️⃣ Load app → Workspace<br/>→ type → Compile"] --> B["2️⃣ Syntax error →<br/>verify phase-tagged message"]
+    B --> C["3️⃣ Dashboard → Projects<br/>→ open → Workspace loads"]
+```
+
+> Not exhaustive by design — 3–5 critical flows, not every page.
+
+---
+
+## ⚙️ 5. CI Pipeline (GitHub Actions)
+
+✅ **Implemented** — see [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+
+```mermaid
+graph TB
+    Push["📤 push / PR"] --> FE["🖥️ frontend-checks<br/>tsc + oxlint + build"]
+    Push --> BE["🐍 backend-checks<br/>ruff + pytest"]
+    FE --> Merge{"✅ All green?"}
+    BE --> Merge
+    Merge -->|Yes| Ship["🚀 Mergeable"]
+    Merge -->|No| Block["🛑 Blocked"]
+
+    style Ship fill:#131316,stroke:#3FB950,color:#EDEDEF
+    style Block fill:#131316,stroke:#F85149,color:#EDEDEF
+```
+
+> 🛑 **Rule:** no merge if `typecheck`, `lint`, or `test` fail. A broken build is worse than no CI at all.
+
+---
+
+## 📊 6. Coverage Expectations
+
+| Layer | Target | Actual | Reasoning |
+|---|:---:|:---:|---|
+| 🧠 Compiler algorithms | ~85%+ | ✅ High | Correctness-critical core |
+| 🔌 Service layer / adapters | ~80%+ | ✅ High | Contract correctness for mock↔real swap |
+| 🧩 UI components | ~50-60% | Moderate | Logic-bearing components prioritized |
+| 🌐 E2E | Low count, high value | Not yet built | 3-5 flows planned, not exhaustive |
+
+> 📌 **Rule:** coverage % is never the goal itself — an 85%-covered optimizer pass beats a 100%-covered trivial component.

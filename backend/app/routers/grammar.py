@@ -1,4 +1,8 @@
+"""/grammar endpoint -- API-spec.md Section 4.
 
+Sprint 11: productions below now match app/compiler/parser/parser.py's
+real grammar exactly (previously this was Sprint 9's placeholder, a
+smaller grammar than what's actually implemented)."""
 
 from fastapi import APIRouter, HTTPException
 

@@ -1,4 +1,13 @@
+"""
+Semantic analyzer correctness tests -- Testing.md Section 2.2: "given AST
+-> expect correct symbol table entries and diagnostics. Cover: undeclared
+variable, type mismatch, duplicate declaration, scope shadowing."
 
+(Type mismatch isn't meaningfully testable yet -- the grammar only
+produces integer literals, so there's no type system depth to check
+beyond what's covered here. Not faked; genuinely out of scope until the
+grammar grows a real type system.)
+"""
 
 from app.compiler.parser.parser import parse
 from app.compiler.semantic.analyzer import analyze

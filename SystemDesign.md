@@ -1,39 +1,58 @@
-# System Design Document
+<div align="center">
 
+# 🧩 System Design Document
 ## SmartCC — Module & Data Model Specification
+
+![Status](https://img.shields.io/badge/backend-Fully%20Implemented-3FB950?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0-5E6AD2?style=flat-square)
+
+</div>
 
 | Field | Value |
 |---|---|
-| Version | 1.0 |
-| Depends On | PRD.md, Architecture.md |
+| Depends On | [`PRD.md`](./PRD.md), [`Architecture.md`](./Architecture.md) |
 
 ---
 
-## 1. Purpose
+## 🎯 1. Purpose
 
-This document defines the **system-level building blocks** of SmartCC: the conceptual compiler modules, the shared data models (TypeScript types) that flow between them, page-level system specs, and the mock-data contract that stands in for the backend during Phase 1.
+This document defines the **system-level building blocks** of SmartCC: the compiler modules, the shared data models that flow between them, page-level specs, and the error-handling philosophy.
 
----
-
-## 2. Compiler Pipeline — Module Responsibilities
-
-| Module | Responsibility | Output Consumed By |
-|---|---|---|
-| **Lexer** | Tokenizes raw source into a token stream | Token Viewer, Parser |
-| **Parser** | Builds Parse Tree / AST from tokens; validates grammar | Parse Tree View, Semantic Analyzer |
-| **Semantic Analyzer** | Type checking, scope resolution, symbol table construction | Symbol Table View, Semantic Report |
-| **Intermediate Code Generator** | Converts AST into Three Address Code (TAC) | TAC Viewer |
-| **Optimizer** | Applies optimization passes (constant folding, dead code elimination, etc.) on TAC | Optimization Comparison View |
-| **Target Code Generator** | Emits assembly-like target output from optimized TAC | Assembly Viewer |
-
-Each module is **independently invokable** in the mock layer — i.e., a mock fixture exists per module output, so any single visualization can be developed/tested without requiring the full pipeline to be "real."
+> ✅ Every module below now has a **real implementation** in `backend/app/compiler/` (v2, Sprints 10-14) — not just a mock contract.
 
 ---
 
-## 3. Core Data Models (Shared Types)
+## ⚙️ 2. Compiler Pipeline — Module Responsibilities
+
+```mermaid
+flowchart LR
+    L["🔤 Lexer"] -->|"Token[]"| P["🌳 Parser"]
+    P -->|"AST"| S["🔍 Semantic<br/>Analyzer"]
+    S -->|"SymbolTable +<br/>Diagnostics"| I["⚙️ IR Generator"]
+    I -->|"TAC"| O["⚡ Optimizer"]
+    O -->|"Optimized TAC"| T["🖥️ Target<br/>Code Gen"]
+    T -->|"Assembly"| Done(["✅"])
+
+    style Done fill:#131316,stroke:#3FB950,color:#EDEDEF
+```
+
+| Module | Responsibility | Consumed By | Real? |
+|---|---|---|---|
+| 🔤 **Lexer** | Tokenizes raw source into a token stream | Token Viewer, Parser | ✅ |
+| 🌳 **Parser** | Builds Parse Tree / AST; validates grammar | Parse Tree View, Semantic Analyzer | ✅ |
+| 🔍 **Semantic Analyzer** | Type checking, scope resolution, symbol table | Symbol Table View, Semantic Report | ✅ |
+| ⚙️ **IR Generator** | Converts AST into Three Address Code (TAC) | TAC Viewer | ✅ |
+| ⚡ **Optimizer** | Constant folding + propagation on TAC | Optimization Comparison View | ✅ |
+| 🖥️ **Target Code Gen** | Emits assembly-like output from optimized TAC | Assembly Viewer | ✅ |
+
+---
+
+## 📐 3. Core Data Models (Shared Types)
+
+> 🔗 Defined once in `frontend/src/types/compiler.ts` **and mirrored field-for-field** in `backend/app/models/compiler.py` (Pydantic). Both the mock adapter and the real HTTP adapter conform to the exact same contract.
 
 ```typescript
-// ---- Lexer ----
+// ---- 🔤 Lexer ----
 interface Token {
   id: string;
   type: TokenType;         // KEYWORD | IDENTIFIER | OPERATOR | LITERAL | ...
@@ -42,21 +61,21 @@ interface Token {
   column: number;
 }
 
-// ---- Parser ----
+// ---- 🌳 Parser ----
 interface ASTNode {
   id: string;
-  kind: string;             // "BinaryExpr", "IfStatement", "FunctionDecl", ...
+  kind: string;             // "BinaryExpr", "FunctionDecl", ...
   children: ASTNode[];
   line: number;
   metadata?: Record<string, unknown>;
 }
 
-// ---- Semantic Analysis ----
+// ---- 🔍 Semantic Analysis ----
 interface SymbolEntry {
   name: string;
-  type: string;             // int, float, function, etc.
+  type: string;
   scope: string;
-  declaredAt: number;       // line number
+  declaredAt: number;
 }
 
 interface SemanticDiagnostic {
@@ -66,124 +85,144 @@ interface SemanticDiagnostic {
   phase: CompilerPhase;
 }
 
-// ---- Intermediate Code ----
+// ---- ⚙️ Intermediate Code ----
 interface TACInstruction {
   id: string;
-  op: string;               // "=", "+", "goto", "if", ...
+  op: string;               // "=", "+", "return", "label", ...
   arg1?: string;
   arg2?: string;
   result?: string;
   label?: string;
 }
 
-// ---- Optimization ----
+// ---- ⚡ Optimization ----
 interface OptimizationDiff {
   before: TACInstruction[];
   after: TACInstruction[];
-  passesApplied: string[];  // ["Constant Folding", "Dead Code Elimination"]
+  passesApplied: string[];  // ["Constant Folding"]
 }
 
-// ---- Target Code ----
+// ---- 🖥️ Target Code ----
 interface AssemblyLine {
   instruction: string;
   operands: string[];
   comment?: string;
 }
 
-// ---- Aggregate Result ----
+// ---- 📦 Aggregate Result ----
 type CompilerPhase =
   | "lexical" | "syntax" | "semantic"
   | "intermediate" | "optimization" | "codegen";
 
 interface CompilationResult {
   tokens: Token[];
-  ast: ASTNode;
+  ast: ASTNode | null;
   symbolTable: SymbolEntry[];
   diagnostics: SemanticDiagnostic[];
   tac: TACInstruction[];
-  optimization: OptimizationDiff;
+  optimization: OptimizationDiff | null;
   assembly: AssemblyLine[];
   status: "success" | "failed";
   failedAtPhase?: CompilerPhase;
 }
 ```
 
-> These types are defined once in `src/types/compiler.ts` and imported everywhere — the mock adapter, the future HTTP adapter, and every visualization component all share this single contract.
+---
+
+## 📄 4. Page-Level System Specs
+
+<table>
+<tr><th>Page</th><th>Data Needed</th><th>Source</th></tr>
+<tr>
+<td>📊 <b>Dashboard</b></td>
+<td>Project count, compilation count, error-rate trend, recent activity, phase-wise average time</td>
+<td><code>dashboardStats.json</code></td>
+</tr>
+<tr>
+<td>🧪 <b>Compiler Workspace</b></td>
+<td>Full <code>CompilationResult</code> per compile action; source buffer (Monaco)</td>
+<td>🎭 Mock <i>or</i> 🐍 real backend</td>
+</tr>
+<tr>
+<td>📖 <b>Grammar Library</b></td>
+<td>Grammar productions + sample programs</td>
+<td><code>GET /grammar/:id</code></td>
+</tr>
+<tr>
+<td>🕒 <b>History</b></td>
+<td>Past <code>CompilationRecord</code>s (timestamp, project, status, phase)</td>
+<td><code>GET /history/:projectId</code></td>
+</tr>
+<tr>
+<td>📈 <b>Reports</b></td>
+<td>Aggregated stats (error types, phase-failure distribution)</td>
+<td>Derived client-side, no separate fixture</td>
+</tr>
+</table>
 
 ---
 
-## 4. Page-Level System Specs
-
-### 4.1 Dashboard
-- **Data needed:** project count, compilation count, error-rate trend, recent projects (n=5), recent compilations (n=5), phase-wise average time.
-- **Mock source:** `dashboardStats.json`
-
-### 4.2 Compiler Workspace
-- **Data needed:** full `CompilationResult` per compile action; source code buffer (Monaco).
-- **Interactions:** compile trigger → loading state → populate all sub-panels → error panel shows `diagnostics` filtered by phase.
-- **Mock source:** `sampleCompilations/*.json` (multiple sample programs covering success + phase-specific failure cases)
-
-### 4.3 Grammar Library
-- **Data needed:** list of supported grammar rules/productions for the C-like subset; example programs per rule.
-- **Mock source:** `grammarLibrary.json`
-
-### 4.4 Compilation History
-- **Data needed:** list of past `CompilationRecord` (timestamp, project, status, phase reached).
-- **Mock source:** `history.json`
-
-### 4.5 Reports
-- **Data needed:** aggregated stats across compilations (most common error types, phase failure distribution).
-- **Mock source:** derived client-side from `history.json` (no separate fixture needed initially)
-
----
-
-## 5. Error Handling Model
+## 🚨 5. Error Handling Model
 
 Errors are always **phase-tagged**, never generic:
 
-```typescript
+```json
 {
-  severity: "error",
-  message: "Undeclared variable 'x' used in expression",
-  line: 14,
-  phase: "semantic"
+  "severity": "error",
+  "message": "Undeclared variable 'x' used in expression",
+  "line": 14,
+  "phase": "semantic"
 }
 ```
 
-The Error Panel in the Workspace groups diagnostics by `phase`, so a student immediately understands **which compiler stage** rejected their program — this is the core pedagogical value of the product and must never be diluted into a flat, unstructured error list.
+```mermaid
+flowchart LR
+    E["🚨 Diagnostic"] --> P{"phase?"}
+    P -->|lexical| L["🔤 shown in<br/>Lexical context"]
+    P -->|syntax| S["🌳 shown in<br/>Syntax context"]
+    P -->|semantic| Sem["🔍 shown in<br/>Semantic Report"]
+```
+
+> 🎯 **This is the core pedagogical value of the product** — a student immediately knows *which compiler stage* rejected their program, never a flat unstructured error list.
 
 ---
 
-## 6. Mock Data Strategy
+## 🎭 6. Mock Data Strategy
 
 | Requirement | Approach |
 |---|---|
-| Realism | Mock fixtures generated from actual manual compilation traces of sample C-like programs (not randomly invented data) |
-| Coverage | At least one fixture per phase-failure scenario (lexical error, syntax error, semantic error, clean success) |
-| Consistency | All fixtures conform strictly to the `CompilationResult` type — enforced via TypeScript, not just convention |
-| Swap-readiness | Fixtures live behind `compilerService.compile()`, never imported directly into components |
+| 🎯 Realism | Fixtures traced from actual manual compilations, not invented |
+| ✅ Coverage | One fixture per phase-failure scenario + clean success |
+| 🔒 Consistency | All fixtures conform strictly to `CompilationResult` (TypeScript-enforced) |
+| 🔌 Swap-readiness | Fixtures live behind `compilerService.compile()`, never imported directly |
 
 ---
 
-## 7. System Constraints (Current Phase)
+## 🔒 7. System Constraints
 
-- No backend execution — all "compilation" is pre-recorded mock output selected based on input matching or a simple simulated delay.
-- No persistence layer (projects/history reset on reload, unless local storage is explicitly scoped in a later sprint).
-- No authentication/multi-user support in this phase.
+| Constraint | Status |
+|---|---|
+| No persistence layer (projects/history reset on reload) | Still true — v3 scope |
+| No authentication/multi-user support | Still true — v3 scope |
+| No backend execution | ❌ **Resolved in v2** — real execution now |
 
 ---
 
-## 8. Traceability Matrix (PRD → Architecture → System)
+## 🔗 8. Traceability Matrix (PRD → Architecture → System)
 
-| PRD Requirement | Architecture Component | System Data Model |
+| PRD Requirement | Component | Data Model |
 |---|---|---|
-| Token Viewer | `features/compiler-workspace/components/TokenViewer` | `Token[]` |
-| Parse Tree | `ParseTreeView` (React Flow) | `ASTNode` |
-| Symbol Table | `SymbolTableView` (TanStack Table) | `SymbolEntry[]` |
-| Semantic Report | `SemanticReportPanel` | `SemanticDiagnostic[]` |
-| Three Address Code | `TACViewer` | `TACInstruction[]` |
-| Optimization Comparison | `OptimizationDiffView` | `OptimizationDiff` |
-| Assembly Viewer | `AssemblyViewer` | `AssemblyLine[]` |
-| Error Panel | `ErrorPanel` | `SemanticDiagnostic[]` (filtered) |
+| 🔤 Token Viewer | `TokenViewer` | `Token[]` |
+| 🌳 Parse Tree | `ParseTreeView` (React Flow) | `ASTNode` |
+| 📋 Symbol Table | `SymbolTableView` (TanStack Table) | `SymbolEntry[]` |
+| 🔍 Semantic Report | `SemanticReportView` | `SemanticDiagnostic[]` |
+| ⚙️ Three Address Code | `TACViewer` | `TACInstruction[]` |
+| ⚡ Optimization Comparison | `OptimizationComparisonView` | `OptimizationDiff` |
+| 🖥️ Assembly Viewer | `AssemblyViewer` | `AssemblyLine[]` |
+| 🚨 Error Panel | `ErrorPanel` | `SemanticDiagnostic[]` (filtered) |
 
-This matrix ensures every PRD requirement maps to exactly one architectural component and one data model — no orphaned requirements, no undocumented components.
+<div align="center">
+
+Every PRD requirement maps to **exactly one** component and **one** data model — no orphans, no undocumented pieces.
+
+</div>

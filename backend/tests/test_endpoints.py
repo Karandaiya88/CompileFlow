@@ -1,4 +1,11 @@
+"""
+Integration tests for Sprint 9's endpoint scaffold -- Testing.md Section 3.
 
+These test the request/response *contract* (matches API-spec.md), not
+compiler correctness -- there's no real compiler yet. Per-algorithm
+correctness tests (Testing.md Section 2.2) start in Sprint 10 once the
+real lexer exists.
+"""
 
 from fastapi.testclient import TestClient
 

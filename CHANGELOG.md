@@ -1,10 +1,56 @@
-# Changelog
+<div align="center">
 
-All notable changes to SmartCC are documented here, organized by sprint per `Phases.md`. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
+# 📝 Changelog
+## Every Sprint, What Shipped, What Broke, What Got Fixed
+
+![Sprints](https://img.shields.io/badge/sprints-15%20delivered-3FB950?style=flat-square)
+![Bugs Found & Fixed](https://img.shields.io/badge/bugs%20found%20%26%20fixed-6-D29922?style=flat-square)
+![Format](https://img.shields.io/badge/format-Keep%20a%20Changelog-58A6FF?style=flat-square)
+
+</div>
+
+> All notable changes to SmartCC, organized by sprint per [`Phases.md`](./Phases.md). Format loosely follows [Keep a Changelog](https://keepachangelog.com/). **Bugs are documented, not hidden** — see the timeline below for exactly when and how each one was caught.
+
+## 🗓️ Timeline at a Glance
+
+```mermaid
+graph LR
+    subgraph v1["🖥️ v1 — Frontend"]
+        S1["1"] --> S2["2"] --> S3["3"] --> S4["4"] --> S5["5"] --> S6["6"] --> S7["7"] --> S8["8"]
+    end
+    subgraph v2["🐍 v2 — Backend"]
+        S9["9"] --> S10["10"] --> S11["11"] --> S12["12"] --> S13["13"] --> S14["14"] --> S15["15"]
+    end
+    v1 --> v2
+
+    style v1 fill:#131316,stroke:#3FB950,color:#EDEDEF
+    style v2 fill:#131316,stroke:#3FB950,color:#EDEDEF
+```
+
+## 📇 Quick Index
+
+| Sprint | Theme | Bugs Found |
+|---|---|:---:|
+| [15 🔌](#-sprint-15--frontend--backend-integration-v2-complete) | Frontend ↔ Backend Integration | 2 |
+| [14 🖥️](#-sprint-14--real-target-codegen-final-compiler-phase) | Real Codegen (final phase) | — |
+| [13 ⚙️⚡](#-sprint-13--real-tac-generation--optimizer) | TAC + Optimizer | — |
+| [12 🔍](#-sprint-12--real-semantic-analyzer) | Semantic Analyzer | — |
+| [11 🌳](#-sprint-11--real-parser--ast) | Real Parser | 2 |
+| [10 🔤](#-sprint-10--real-lexer-ply) | Real Lexer | — |
+| [9 🚪](#-sprint-9--backend-scaffold-v2-begins) | Backend Scaffold | — |
+| [Polish 🩹](#-polish-pass-1--v1-audit--bug-fixes) | v1 Audit | 3 |
+| [8 📦](#-sprint-8--grammar-library-history-reports-settings-help-projects) | Utility Pages | — |
+| [7 🖨️](#-sprint-7--assembly-viewer--consoleerror-panel-completion) | Assembly Viewer | — |
+| [6 📊](#-sprint-6--semantic-report--tac--optimization-comparison) | Semantic/TAC/Opt views | — |
+| [5 🌲](#-sprint-5--parse-tree-visualization) | Parse Tree | — |
+| [4 📋](#-sprint-4--token-viewer--symbol-table) | Token/Symbol views | — |
+| [3 🧪](#-sprint-3--compiler-workspace-shell-editor--pipeline-stepper) | Workspace shell | — |
+| [2 📈](#-sprint-2--dashboard) | Dashboard | — |
+| [1 🏗️](#-sprint-1--app-shell-routing-layout--design-system-foundation) | App shell | — |
 
 ---
 
-## [Sprint 15] — Frontend ↔ Backend Integration (v2 Complete)
+## 🔌 [Sprint 15] — Frontend ↔ Backend Integration (v2 Complete)
 
 **Date:** 2026-08-27
 **Status:** ✅ Complete — **v2 finished.** Pending Karan's final review.
@@ -42,7 +88,7 @@ Every phase promised in `Phases.md`'s v2 roadmap (Sprints 9-15) is done: a real 
 
 ---
 
-## [Sprint 14] — Real Target Codegen (Final Compiler Phase)
+## 🖥️ [Sprint 14] — Real Target Codegen (Final Compiler Phase)
 
 **Date:** 2026-08-20
 **Status:** ✅ Complete — **every real compiler phase is now implemented.** Pending Karan's review/approval before Sprint 15 (the last item in v2).
@@ -81,7 +127,7 @@ correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all
 
 ---
 
-## [Sprint 13] — Real TAC Generation + Optimizer
+## ⚙️⚡ [Sprint 13] — Real TAC Generation + Optimizer
 
 **Date:** 2026-08-19
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 14
@@ -111,7 +157,7 @@ correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all
 
 ---
 
-## [Sprint 12] — Real Semantic Analyzer
+## 🔍 [Sprint 12] — Real Semantic Analyzer
 
 **Date:** 2026-08-15
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 13
@@ -146,7 +192,7 @@ correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all
 
 ---
 
-## [Sprint 11] — Real Parser → AST
+## 🌳 [Sprint 11] — Real Parser → AST
 
 **Date:** 2026-08-08
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 12
@@ -183,7 +229,7 @@ correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all
 
 ---
 
-## [Sprint 10] — Real Lexer (PLY)
+## 🔤 [Sprint 10] — Real Lexer (PLY)
 
 **Date:** 2026-08-04
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 11
@@ -212,7 +258,7 @@ correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all
 
 ---
 
-## [Sprint 9] — Backend Scaffold (v2 begins)
+## 🚪 [Sprint 9] — Backend Scaffold (v2 begins)
 
 **Date:** 2026-08-02
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 10
@@ -244,7 +290,7 @@ correctly tokenizes, parses, analyzes (no diagnostics), generates TAC, folds all
 
 ---
 
-## [Polish Pass 1] — v1 Audit & Bug Fixes
+## 🩹 [Polish Pass 1] — v1 Audit & Bug Fixes
 
 **Date:** 2026-07-30
 **Status:** ✅ Complete
@@ -264,7 +310,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 8] — Grammar Library, History, Reports, Settings, Help, Projects
+## 📦 [Sprint 8] — Grammar Library, History, Reports, Settings, Help, Projects
 
 **Date:** 2026-07-30
 **Status:** ✅ Complete — this closes out v1 entirely, pending Karan's final review
@@ -293,7 +339,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 7] — Assembly Viewer + Console/Error Panel Completion
+## 🖨️ [Sprint 7] — Assembly Viewer + Console/Error Panel Completion
 
 **Date:** 2026-07-30
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 8
@@ -319,7 +365,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 6] — Semantic Report + TAC + Optimization Comparison
+## 📊 [Sprint 6] — Semantic Report + TAC + Optimization Comparison
 
 **Date:** 2026-07-25
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 7
@@ -345,7 +391,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 5] — Parse Tree Visualization
+## 🌲 [Sprint 5] — Parse Tree Visualization
 
 **Date:** 2026-07-25
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 6
@@ -371,7 +417,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 4] — Token Viewer + Symbol Table
+## 📋 [Sprint 4] — Token Viewer + Symbol Table
 
 **Date:** 2026-07-25
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 5
@@ -397,7 +443,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 3] — Compiler Workspace Shell (Editor + Pipeline Stepper)
+## 🧪 [Sprint 3] — Compiler Workspace Shell (Editor + Pipeline Stepper)
 
 **Date:** 2026-07-23
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 4
@@ -427,7 +473,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 2] — Dashboard
+## 📈 [Sprint 2] — Dashboard
 
 **Date:** 2026-07-23
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 3
@@ -458,7 +504,7 @@ Proactive audit pass requested before moving to v2 (per Phases.md §6 Rule 3's r
 
 ---
 
-## [Sprint 1] — App Shell, Routing, Layout & Design System Foundation
+## 🏗️ [Sprint 1] — App Shell, Routing, Layout & Design System Foundation
 
 **Date:** 2026-07-23
 **Status:** ✅ Complete — pending Karan's review/approval before Sprint 2

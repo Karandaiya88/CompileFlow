@@ -1,4 +1,7 @@
-
+"""
+App configuration -- reads from environment variables only, per
+Security.md Section 2: no secrets hardcoded, .env is git-ignored.
+"""
 
 import os
 

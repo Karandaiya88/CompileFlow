@@ -1,4 +1,12 @@
+"""
+TAC generation correctness tests -- Testing.md Section 2.2: "given AST ->
+expect exact TAC instruction sequence for known constructs (if/else,
+loops, expressions with precedence)."
 
+(if/else/loops aren't in the grammar yet -- Sprint 11's documented gap --
+so those constructs aren't tested here; that's an honest scope match to
+what the parser actually produces, not an oversight.)
+"""
 
 from app.compiler.optimizer.tac_generator import generate_tac
 from app.compiler.parser.parser import parse

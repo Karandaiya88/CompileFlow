@@ -1,4 +1,9 @@
-
+"""
+Optimizer correctness tests -- Testing.md Section 2.2: "given TAC ->
+expect optimized TAC matching hand-verified 'correct' optimization
+output per pass (constant folding tested independently, then in
+combination)."
+"""
 
 from app.compiler.optimizer.optimizer import optimize
 from app.compiler.optimizer.tac_generator import generate_tac

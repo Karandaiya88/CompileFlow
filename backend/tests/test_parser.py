@@ -1,4 +1,8 @@
-
+"""
+Parser correctness tests -- Testing.md Section 2.2: "given token stream
+-> expect exact AST shape. Include invalid-grammar cases and assert the
+correct syntax error is raised."
+"""
 
 from app.compiler.parser.parser import parse
 
